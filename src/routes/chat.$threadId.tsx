@@ -36,7 +36,11 @@ function ChatPage() {
   const initial = useMemo(() => ensureThread(threadId), [threadId]);
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const [notes, setNotes] = useState<NoteDoc[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const { messages, sendMessage, status, error } = useChat({
     id: threadId,
@@ -45,6 +49,10 @@ function ChatPage() {
   });
 
   const isBusy = status === "submitted" || status === "streaming";
+
+  useEffect(() => {
+    setNotes(loadNotes());
+  }, []);
 
   useEffect(() => {
     if (messages.length > 0) persistThread(threadId, messages);
@@ -58,13 +66,37 @@ function ChatPage() {
     inputRef.current?.focus();
   }, [threadId, isBusy]);
 
+  async function handleFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setUploadError(null);
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        const text = await extractFileText(file);
+        if (!text.trim()) {
+          setUploadError(`Couldn't read any text from "${file.name}".`);
+          continue;
+        }
+        addNote(file.name, text);
+      }
+      setNotes(loadNotes());
+    } catch {
+      setUploadError("That file couldn't be processed. Try a PDF or a .txt file.");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const text = input.trim();
     if (!text || isBusy) return;
     setInput("");
-    void sendMessage({ text });
+    const noteContext = retrieveContext(text);
+    void sendMessage({ text }, { body: { noteContext } });
   }
+
 
   const empty = messages.length === 0;
 
