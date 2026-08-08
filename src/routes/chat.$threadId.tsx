@@ -1,11 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { ChevronDown, Plus, SendHorizontal } from "lucide-react";
+import { ChevronDown, FileText, Loader2, Plus, SendHorizontal, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { ShivaSidebar } from "@/components/ShivaSidebar";
 import { ensureThread, persistThread } from "@/lib/chat-store";
+import { addNote, loadNotes, removeNote, retrieveContext, type NoteDoc } from "@/lib/notes-store";
+import { extractFileText } from "@/lib/pdf-text";
+
 
 export const Route = createFileRoute("/chat/$threadId")({
   ssr: false,
