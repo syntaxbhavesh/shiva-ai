@@ -66,26 +66,47 @@ function tokenize(text: string) {
     .filter((w) => w.length > 2 && !STOP.has(w));
 }
 
-/** Keyword-overlap retrieval over the student's uploaded notes. */
-export function retrieveContext(query: string, topK = 4): { name: string; text: string }[] {
+/** Keyword-overlap retrieval over the student's uploaded notes, with fallback. */
+export function retrieveContext(query: string, topK = 6): { name: string; text: string }[] {
+  const docs = loadNotes();
+  if (docs.length === 0) return [];
+
   const terms = tokenize(query);
-  if (terms.length === 0) return [];
   const scored: { name: string; text: string; score: number }[] = [];
 
-  for (const doc of loadNotes()) {
+  for (const doc of docs) {
+    const nameTerms = tokenize(doc.name);
     for (const chunk of doc.chunks) {
       const lower = chunk.toLowerCase();
       let score = 0;
       for (const term of terms) {
         const hits = lower.split(term).length - 1;
         if (hits > 0) score += 1 + Math.min(hits - 1, 3) * 0.25;
+        // partial/stemmed match (e.g. "photosynthesis" vs "photosynthetic")
+        else if (term.length > 4 && lower.includes(term.slice(0, Math.max(4, term.length - 2))))
+          score += 0.4;
+        if (nameTerms.includes(term)) score += 0.3;
       }
       if (score > 0) scored.push({ name: doc.name, text: chunk, score });
     }
   }
 
-  return scored
+  const hits = scored
     .sort((a, b) => b.score - a.score)
     .slice(0, topK)
     .map(({ name, text }) => ({ name, text }));
+
+  if (hits.length > 0) return hits;
+
+  // Fallback: no keyword overlap, but the student has notes — send the opening
+  // excerpts of the most recent documents so the model can still ground itself.
+  const fallback: { name: string; text: string }[] = [];
+  for (const doc of docs) {
+    for (const chunk of doc.chunks.slice(0, 2)) {
+      fallback.push({ name: doc.name, text: chunk });
+      if (fallback.length >= topK) return fallback;
+    }
+  }
+  return fallback;
 }
+
