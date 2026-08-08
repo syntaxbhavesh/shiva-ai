@@ -152,18 +152,64 @@ function ChatPage() {
         )}
 
         <div className={empty ? "w-full max-w-2xl pb-10" : "w-full max-w-2xl pb-6"}>
+          {(notes.length > 0 || uploadError) && (
+            <div className="mb-3 flex flex-wrap items-center justify-center gap-2">
+              {notes.map((n) => (
+                <span
+                  key={n.id}
+                  className="flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-xs text-muted-foreground"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  <span className="max-w-[160px] truncate text-foreground">{n.name}</span>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${n.name}`}
+                    onClick={() => {
+                      removeNote(n.id);
+                      setNotes(loadNotes());
+                    }}
+                    className="transition-opacity hover:opacity-70"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </span>
+              ))}
+              {uploadError && <span className="text-xs text-destructive">{uploadError}</span>}
+            </div>
+          )}
+
           <form
             onSubmit={submit}
             className="flex items-center gap-3 rounded-full bg-card px-4 py-3 shadow-2xl"
           >
-            <span className="text-muted-foreground" aria-hidden>
-              <Plus className="h-5 w-5" />
-            </span>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".pdf,.txt,.md,text/plain,application/pdf"
+              multiple
+              className="hidden"
+              onChange={(e) => void handleFiles(e.target.files)}
+            />
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              title="Upload notes or PDFs"
+              aria-label="Upload notes or PDFs"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {uploading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Plus className="h-5 w-5" />
+              )}
+            </button>
             <input
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask Shiva anything..."
+              placeholder={
+                notes.length > 0 ? "Ask about your notes..." : "Ask Shiva anything..."
+              }
               className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -183,6 +229,7 @@ function ChatPage() {
             Powered by <span className="font-semibold text-accent">BOOKStore</span>
           </p>
         </div>
+
       </main>
     </div>
   );
