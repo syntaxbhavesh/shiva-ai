@@ -81,7 +81,7 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
 
 
       {panel && (
-        <div className="fixed left-14 top-0 z-30 h-full w-72 border-r border-border bg-sidebar p-4 shadow-2xl">
+        <div className="fixed left-14 top-0 z-30 h-full w-72 animate-[slide-in-left_0.28s_ease-out] border-r border-border bg-sidebar/95 p-4 shadow-2xl backdrop-blur-md">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold">
               {panel === "search" ? "Search chats" : "Conversations"}
