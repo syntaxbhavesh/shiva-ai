@@ -89,7 +89,7 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
             <button
               onClick={() => setPanel(null)}
               aria-label="Close panel"
-              className="text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground transition-all duration-200 hover:rotate-90 hover:text-foreground"
             >
               <X className="h-4 w-4" />
             </button>
@@ -100,13 +100,13 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search..."
-              className="mt-3 w-full rounded-lg bg-secondary px-3 py-2 text-sm outline-none placeholder:text-muted-foreground"
+              className="mt-3 w-full animate-[fade-in_0.25s_ease-out] rounded-lg bg-secondary px-3 py-2 text-sm outline-none transition-shadow focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
             />
           )}
 
           <button
             onClick={startNewChat}
-            className="mt-3 w-full rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
+            className="mt-3 w-full rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-transform duration-200 hover:scale-[1.02] active:scale-95"
           >
             New chat
           </button>
@@ -115,13 +115,15 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
             {visible.length === 0 && (
               <p className="px-1 py-2 text-xs text-muted-foreground">No conversations yet.</p>
             )}
-            {visible.map((thread) => (
+            {visible.map((thread, i) => (
               <div
                 key={thread.id}
-                className={`group flex items-center gap-2 rounded-lg px-2 py-2 text-sm transition-colors hover:bg-secondary ${
+                style={{ animationDelay: `${Math.min(i, 10) * 35}ms` }}
+                className={`group flex animate-[fade-in_0.3s_ease-out_both] items-center gap-2 rounded-lg px-2 py-2 text-sm transition-all duration-200 hover:translate-x-1 hover:bg-secondary ${
                   thread.id === activeThreadId ? "bg-secondary" : ""
                 }`}
               >
+
                 <button
                   onClick={() => {
                     setPanel(null);
