@@ -14,7 +14,7 @@ export const Route = createFileRoute("/chat/$threadId")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Chat with Shiva AI — Student Study Assistant" },
+      { title: "Shiva AI" },
       {
         name: "description",
         content: "Ask Shiva AI any study question and get clear, step-by-step explanations.",
