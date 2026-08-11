@@ -213,7 +213,7 @@ function ChatPage() {
               className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              1.0 Neo
+              1.0 Rudra
               <ChevronDown className="h-3.5 w-3.5" />
             </span>
             <button
