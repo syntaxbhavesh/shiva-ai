@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { createGeminiProvider, createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { BOOKSTORE_KB } from "@/lib/bookstore-kb";
 
 const SYSTEM_PROMPT = `You are Shiva AI, a helpful study assistant for students on BOOKStore.
@@ -34,8 +34,12 @@ export const Route = createFileRoute("/api/chat")({
           return new Response("Messages are required", { status: 400 });
         }
 
-        const key = process.env["LOVABLE_API_KEY"];
-        if (!key) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
+        const geminiKey = process.env["GEMINI_API_KEY"];
+        const lovableKey = process.env["LOVABLE_API_KEY"];
+        const useGemini = !!geminiKey && geminiKey !== "Enter-Your-API";
+        if (!useGemini && !lovableKey) {
+          return new Response("Missing GEMINI_API_KEY", { status: 500 });
+        }
 
         const notes = Array.isArray(body.noteContext) ? body.noteContext.slice(0, 6) : [];
         const notesBlock = notes.length
@@ -44,9 +48,12 @@ export const Route = createFileRoute("/api/chat")({
               .join("\n\n")}`
           : "\n\nSTUDENT NOTES: none relevant for this question.";
 
-        const gateway = createLovableAiGatewayProvider(key);
+        const model = useGemini
+          ? createGeminiProvider(geminiKey!)("gemini-2.5-flash")
+          : createLovableAiGatewayProvider(lovableKey!)("google/gemini-3.6-flash");
+
         const result = streamText({
-          model: gateway("google/gemini-3.6-flash"),
+          model,
           system: SYSTEM_PROMPT + notesBlock,
           messages: await convertToModelMessages(messages as UIMessage[]),
         });
