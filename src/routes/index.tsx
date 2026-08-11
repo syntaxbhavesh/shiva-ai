@@ -6,13 +6,13 @@ export const Route = createFileRoute("/")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Shiva AI — Study Assistant for Students" },
+      { title: "Shiva AI — BOOKStore" },
       {
         name: "description",
         content:
           "Ask Shiva AI any study question and get clear, step-by-step explanations instantly.",
       },
-      { property: "og:title", content: "Shiva AI — Study Assistant for Students" },
+      { property: "og:title", content: "Shiva AI — BOOKStore" },
       {
         property: "og:description",
         content: "Ask Shiva AI any study question and get clear explanations instantly.",
