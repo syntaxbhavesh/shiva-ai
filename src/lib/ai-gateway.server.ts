@@ -12,15 +12,14 @@ export function createLovableAiGatewayProvider(lovableApiKey: string) {
 }
 
 /**
- * Google Gemini via its OpenAI-compatible endpoint.
- * Uses your own Gemini API key (GEMINI_API_KEY in .env).
+ * Google Gemini through Google's OpenAI-compatible endpoint.
+ * The API key stays server-side and must be supplied through
+ * GEMINI_API_KEY in the deployment environment.
  */
 export function createGeminiProvider(geminiApiKey: string) {
   return createOpenAICompatible({
     name: "gemini",
-    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai",
-    headers: {
-      Authorization: `Bearer ${geminiApiKey}`,
-    },
+    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+    apiKey: geminiApiKey,
   });
 }
