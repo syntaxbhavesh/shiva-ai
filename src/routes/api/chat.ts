@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
-import { createGeminiProvider, createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { createGroqProvider, createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { BOOKSTORE_KB } from "@/lib/bookstore-kb";
 
 const SYSTEM_PROMPT = `You are Shiva AI, a helpful study assistant for students on BOOKStore.
@@ -34,12 +34,12 @@ export const Route = createFileRoute("/api/chat")({
             return new Response("Messages are required", { status: 400 });
           }
 
-          const geminiKey = process.env["GEMINI_API_KEY"]?.trim();
+          const groqKey = process.env["GROQ_API_KEY"]?.trim();
           const lovableKey = process.env["LOVABLE_API_KEY"]?.trim();
-          const useGemini = Boolean(geminiKey && geminiKey !== "Enter-Your-API");
+          const useGroq = Boolean(groqKey && groqKey !== "Enter-Your-API");
 
-          if (!useGemini && !lovableKey) {
-            return new Response("AI provider is not configured. Set GEMINI_API_KEY or LOVABLE_API_KEY.", { status: 500 });
+          if (!useGroq && !lovableKey) {
+            return new Response("AI provider is not configured. Set GROQ_API_KEY or LOVABLE_API_KEY.", { status: 500 });
           }
 
           const notes = Array.isArray(body.noteContext) ? body.noteContext.slice(0, 6) : [];
@@ -49,8 +49,8 @@ export const Route = createFileRoute("/api/chat")({
                 .join("\n\n")}`
             : "\n\nSTUDENT NOTES: none relevant for this question.";
 
-          const model = useGemini
-            ? createGeminiProvider(geminiKey!)("gemini-2.5-flash")
+          const model = useGroq
+            ? createGroqProvider(groqKey!)("llama-3.3-70b-versatile")
             : createLovableAiGatewayProvider(lovableKey!)("google/gemini-3.6-flash");
 
           const result = streamText({
