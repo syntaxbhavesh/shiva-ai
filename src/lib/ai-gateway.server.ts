@@ -12,14 +12,14 @@ export function createLovableAiGatewayProvider(lovableApiKey: string) {
 }
 
 /**
- * Google Gemini through Google's OpenAI-compatible endpoint.
+ * Groq through its OpenAI-compatible endpoint.
  * The API key stays server-side and must be supplied through
- * GEMINI_API_KEY in the deployment environment.
+ * GROQ_API_KEY in the deployment environment.
  */
-export function createGeminiProvider(geminiApiKey: string) {
+export function createGroqProvider(groqApiKey: string) {
   return createOpenAICompatible({
-    name: "gemini",
-    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-    apiKey: geminiApiKey,
+    name: "groq",
+    baseURL: "https://api.groq.com/openai/v1",
+    apiKey: groqApiKey,
   });
 }
