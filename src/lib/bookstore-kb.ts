@@ -1,4 +1,4 @@
-```js
+
 // BOOKStore official knowledge base (source: BOOKStore - Shiva Database).
 // Used as the authoritative source for platform / founder / support questions.
 
@@ -336,4 +336,3 @@ BOOKStore's goal is to bring study materials, Top Educators Batches, premium res
 BOOKStore Pro — 100 XP — includes Pi Pro, Premium Batches and Khazana, with access to selected previous batches and Top Educators resources depending on current availability.
 
 `;
-```
