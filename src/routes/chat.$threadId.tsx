@@ -184,6 +184,8 @@ function ChatPage() {
           >
             <input
               ref={fileRef}
+              id="chat-file-upload"
+              name="chat-file-upload"
               type="file"
               accept=".pdf,.txt,.md,text/plain,application/pdf"
               multiple
@@ -205,6 +207,8 @@ function ChatPage() {
             </button>
             <input
               ref={inputRef}
+              id="chat-message"
+              name="message"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={
