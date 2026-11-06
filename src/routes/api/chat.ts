@@ -20,6 +20,13 @@ Never claim to be Bhavesh. Do not solve homework or exam questions outright — 
 BOOKSTORE KNOWLEDGE BASE:
 ${BOOKSTORE_KB}`;
 
+function textError(message: string, status: number) {
+  return new Response(message, {
+    status,
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
+  });
+}
+
 export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
@@ -29,9 +36,9 @@ export const Route = createFileRoute("/api/chat")({
             messages?: unknown;
             noteContext?: { name: string; text: string }[];
           };
-          const messages = body.messages;
-          if (!Array.isArray(messages)) {
-            return new Response("Messages are required", { status: 400 });
+
+          if (!Array.isArray(body.messages) || body.messages.length === 0) {
+            return textError("Send a message before starting the chat.", 400);
           }
 
           const groqKey = process.env["GROQ_API_KEY"]?.trim();
@@ -39,7 +46,11 @@ export const Route = createFileRoute("/api/chat")({
           const useGroq = Boolean(groqKey && groqKey !== "Enter-Your-API");
 
           if (!useGroq && !lovableKey) {
-            return new Response("AI provider is not configured. Set GROQ_API_KEY or LOVABLE_API_KEY.", { status: 500 });
+            console.error("Shiva AI is not configured: GROQ_API_KEY and LOVABLE_API_KEY are missing.");
+            return textError(
+              "Shiva AI is not configured on the server. Add GROQ_API_KEY in Vercel → Project Settings → Environment Variables, then redeploy.",
+              503,
+            );
           }
 
           const notes = Array.isArray(body.noteContext) ? body.noteContext.slice(0, 6) : [];
@@ -56,16 +67,20 @@ export const Route = createFileRoute("/api/chat")({
           const result = streamText({
             model,
             system: SYSTEM_PROMPT + notesBlock,
-            messages: await convertToModelMessages(messages as UIMessage[]),
+            messages: await convertToModelMessages(body.messages as UIMessage[]),
           });
 
           return result.toUIMessageStreamResponse({
-            originalMessages: messages as UIMessage[],
+            originalMessages: body.messages as UIMessage[],
           });
         } catch (error) {
-          console.error("Shiva AI /api/chat error:", error);
-          const message = error instanceof Error ? error.message : "Unknown AI provider error";
-          return new Response(`AI request failed: ${message}`, { status: 500 });
+          // Keep provider diagnostics in server logs; never expose secrets or raw
+          // upstream responses to the browser.
+          console.error("Shiva AI /api/chat provider error:", error);
+          return textError(
+            "Shiva AI could not get a response from its AI provider. Check that the API key is valid, the selected model is available, and the provider account has access.",
+            502,
+          );
         }
       },
     },
