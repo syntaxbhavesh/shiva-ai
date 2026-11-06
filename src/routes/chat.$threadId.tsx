@@ -143,7 +143,7 @@ function ChatPage() {
               )}
               {error && (
                 <p className="mr-auto rounded-xl bg-destructive/15 px-4 py-3 text-sm text-destructive">
-                  Something went wrong. Please try again in a moment.
+                  {error.message || "Shiva AI could not respond. Please check the server configuration and try again."}
                 </p>
               )}
               <div ref={endRef} />
