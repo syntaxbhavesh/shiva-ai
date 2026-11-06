@@ -97,6 +97,8 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
 
           {panel === "search" && (
             <input
+              id="chat-search"
+              name="chat-search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search..."
