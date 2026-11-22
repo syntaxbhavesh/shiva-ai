@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { convertToModelMessages, streamText, type UIMessage } from "ai";
-import { createGroqProvider, createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { convertToModelMessages, createUIMessageStream, createUIMessageStreamResponse, generateText, type UIMessage } from "ai";
+import { getShivaProviders } from "@/lib/ai-providers.server";
 import { BOOKSTORE_KB } from "@/lib/bookstore-kb";
 
 const SYSTEM_PROMPT = `You are Shiva AI, a helpful study assistant for students on BOOKStore.
@@ -9,13 +9,13 @@ Explain concepts step by step, at the level of the student asking.
 Never introduce yourself unless asked.
 
 Sources you can use, in priority order:
-1. STUDENT NOTES — excerpts retrieved from files (PDFs/notes) the student uploaded. If any notes are provided, you MUST read them first and answer from them whenever they contain anything related to the question, quoting or paraphrasing the relevant lines and citing the file name. Do not ignore them and do not say you cannot access uploaded files — the excerpts below ARE the uploaded file content. Only if the excerpts truly contain nothing related, say so briefly and then answer from your own knowledge.
-2. BOOKSTORE KNOWLEDGE BASE — the authoritative source for anything about the platform, its founder/admin (Bhavesh), accounts, support and policies. Always use it for such questions instead of guessing
+1. STUDENT NOTES — excerpts retrieved from files the student uploaded. If relevant notes are provided, answer from them and cite the file name.
+2. BOOKSTORE KNOWLEDGE BASE — authoritative source for BOOKStore, its founder/admin (Bhavesh), accounts, support and policies.
 3. Your own subject knowledge — for general study/academic questions only.
 
 If a question about BOOKStore or Bhavesh is not covered by the knowledge base, reply:
 "I am not sure about that. Please contact Bhavesh or the support team for more details."
-Never claim to be Bhavesh. Do not solve homework or exam questions outright — teach the method and point to resources.
+Never claim to be Bhavesh. Teach academic methods clearly.
 
 BOOKSTORE KNOWLEDGE BASE:
 ${BOOKSTORE_KB}`;
@@ -29,50 +29,74 @@ export const Route = createFileRoute("/api/chat")({
             messages?: unknown;
             noteContext?: { name: string; text: string }[];
           };
-          const messages = body.messages;
-          if (!Array.isArray(messages)) {
-            return new Response("Messages are required", { status: 400 });
+          if (!Array.isArray(body.messages) || body.messages.length === 0) {
+            return Response.json({ error: "Messages are required." }, { status: 400 });
           }
 
-          const groqKey = process.env["GROQ_API_KEY"]?.trim();
-          const lovableKey = process.env["LOVABLE_API_KEY"]?.trim();
-          const useGroq = Boolean(groqKey && groqKey !== "Enter-Your-API");
-
-          if (!useGroq && !lovableKey) {
-            return new Response("AI provider is not configured. Set GROQ_API_KEY or LOVABLE_API_KEY.", { status: 500 });
-          }
-
+          const messages = body.messages as UIMessage[];
           const notes = Array.isArray(body.noteContext) ? body.noteContext.slice(0, 6) : [];
           const notesBlock = notes.length
-            ? `\n\nSTUDENT NOTES (retrieved excerpts for the latest question):\n${notes
-                .map((n, i) => `[${i + 1}] From "${n.name}":\n${n.text}`)
-                .join("\n\n")}`
+            ? `\n\nSTUDENT NOTES:\n${notes.map((n, i) => `[${i + 1}] From "${n.name}":\n${n.text}`).join("\n\n")}`
             : "\n\nSTUDENT NOTES: none relevant for this question.";
 
-          const model = useGroq
-            ? createGroqProvider(groqKey!)("openai/gpt-oss-120b")
-            : createLovableAiGatewayProvider(lovableKey!)("google/gemini-3.6-flash");
-
-          // Reasoning parts returned by reasoning-capable models must not be
-          // replayed to OpenAI-compatible providers as reasoning_content.
-          // Keep the visible conversation text and tool history, but omit
-          // private reasoning parts before converting the UI messages.
-          const conversation = (messages as UIMessage[]).map((message) => ({
+          // Never replay hidden reasoning parts from earlier assistant turns to providers.
+          const safeMessages = messages.map((message) => ({
             ...message,
-            parts: message.parts.filter((part) => part.type !== "reasoning"),
+            parts: (message.parts || []).filter((part) => part.type !== "reasoning"),
           }));
+          const modelMessages = await convertToModelMessages(safeMessages);
+          const providers = getShivaProviders();
 
-          const modelMessages = await convertToModelMessages(conversation);
+          if (providers.length === 0) {
+            return Response.json({
+              error: "No AI provider is configured.",
+              detail: "Configure GROQ_API_KEY, GEMINI_API_KEY, or both CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN in Vercel.",
+            }, { status: 503 });
+          }
 
-          const result = streamText({
-            model,
-            system: SYSTEM_PROMPT + notesBlock,
-            messages: modelMessages,
+          const failures: string[] = [];
+          let answer = "";
+          let selectedProvider = "";
+
+          // Generate once with the first healthy provider. If a provider errors,
+          // try the next configured provider in the declared priority order.
+          for (const provider of providers) {
+            try {
+              const result = await generateText({
+                model: provider.model,
+                system: SYSTEM_PROMPT + notesBlock,
+                messages: modelMessages,
+                maxRetries: 0,
+              });
+              answer = result.text.trim();
+              if (!answer) throw new Error("Provider returned an empty response.");
+              selectedProvider = provider.name;
+              break;
+            } catch (error) {
+              const detail = error instanceof Error ? error.message : "Unknown provider error";
+              console.error(`Shiva AI ${provider.name} provider failed:`, detail);
+              failures.push(`${provider.name}: ${detail.slice(0, 220)}`);
+            }
+          }
+
+          if (!answer) {
+            return Response.json({
+              error: "All configured AI providers failed.",
+              detail: failures.join(" | ").slice(0, 900),
+            }, { status: 502 });
+          }
+
+          console.info(`Shiva AI response generated by ${selectedProvider}`);
+          const textId = crypto.randomUUID();
+          const stream = createUIMessageStream({
+            execute: ({ writer }) => {
+              writer.write({ type: "text-start", id: textId });
+              writer.write({ type: "text-delta", id: textId, delta: answer });
+              writer.write({ type: "text-end", id: textId });
+            },
           });
 
-          return result.toUIMessageStreamResponse({
-            originalMessages: messages as UIMessage[],
-          });
+          return createUIMessageStreamResponse({ stream });
         } catch (error) {
           console.error("Shiva AI /api/chat error:", error);
           const message = error instanceof Error ? error.message : "Unknown AI provider error";

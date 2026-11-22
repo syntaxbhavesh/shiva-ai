@@ -30,6 +30,7 @@ export function loadThreads(): Thread[] {
 export function saveThreads(threads: Thread[]) {
   if (!hasWindow()) return;
   window.localStorage.setItem(KEY, JSON.stringify(threads));
+  window.dispatchEvent(new Event("shiva-threads-updated"));
 }
 
 export function newThreadId() {
@@ -56,10 +57,23 @@ export function persistThread(id: string, messages: UIMessage[]) {
   const firstUser = messages.find((m) => m.role === "user");
   const titleText =
     firstUser?.parts.map((p) => (p.type === "text" ? p.text : "")).join("").trim() ?? "";
-  const title = titleText ? titleText.slice(0, 40) : "New chat";
+  const existingTitle = index >= 0 ? threads[index].title : "";
+  const title = existingTitle && existingTitle !== "New chat"
+    ? existingTitle
+    : titleText ? titleText.slice(0, 40) : "New chat";
   const next: Thread = { id, title, updatedAt: Date.now(), messages };
   if (index >= 0) threads[index] = next;
   else threads.unshift(next);
+  saveThreads(threads);
+}
+
+export function setThreadTitle(id: string, title: string) {
+  const cleanTitle = title.trim().slice(0, 64);
+  if (!cleanTitle) return;
+  const threads = loadThreads();
+  const index = threads.findIndex((thread) => thread.id === id);
+  if (index < 0) return;
+  threads[index] = { ...threads[index], title: cleanTitle, updatedAt: Date.now() };
   saveThreads(threads);
 }
 

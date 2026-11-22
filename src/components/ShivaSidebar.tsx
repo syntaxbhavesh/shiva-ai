@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { MessageCircle, PencilLine, Search, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import logo from "@/assets/shiva-logo.png";
 import { deleteThread, loadThreads, newThreadId, type Thread } from "@/lib/chat-store";
 
@@ -11,6 +11,16 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
   const [panel, setPanel] = useState<Panel>(null);
   const [threads, setThreads] = useState<Thread[]>([]);
   const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    const refresh = () => setThreads(loadThreads());
+    window.addEventListener("shiva-threads-updated", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("shiva-threads-updated", refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
 
   function openPanel(next: Panel) {
     setThreads(loadThreads());
@@ -145,7 +155,8 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
                     setThreads(loadThreads());
                     if (thread.id === activeThreadId) startNewChat();
                   }}
-                  className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-destructive"
+                  title="Delete chat"
+                  className="text-muted-foreground opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 hover:text-destructive"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>

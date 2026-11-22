@@ -5,7 +5,7 @@ import { ChevronDown, FileText, Loader2, Plus, SendHorizontal, X } from "lucide-
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { ShivaSidebar } from "@/components/ShivaSidebar";
-import { ensureThread, persistThread } from "@/lib/chat-store";
+import { ensureThread, persistThread, setThreadTitle } from "@/lib/chat-store";
 import { addNote, loadNotes, removeNote, retrieveContext, type NoteDoc } from "@/lib/notes-store";
 import { extractFileText } from "@/lib/pdf-text";
 
@@ -38,6 +38,7 @@ function ChatPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const lastTitleMessageCount = useRef(0);
   const [notes, setNotes] = useState<NoteDoc[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -56,6 +57,43 @@ function ChatPage() {
 
   useEffect(() => {
     if (messages.length > 0) persistThread(threadId, messages);
+  }, [messages, status, threadId]);
+
+  // Ask the configured AI provider to title the whole conversation after each
+  // completed assistant turn, rather than using the first user prompt as title.
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    if (
+      status !== "ready" ||
+      messages.length < 2 ||
+      lastMessage?.role !== "assistant" ||
+      lastTitleMessageCount.current === messages.length
+    ) return;
+
+    lastTitleMessageCount.current = messages.length;
+    const conversation = messages.map((message) => ({
+      role: message.role,
+      text: message.parts
+        .map((part) => (part.type === "text" ? part.text : ""))
+        .join(" ")
+        .trim(),
+    }));
+
+    void fetch("/api/title", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: conversation }),
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Title generation unavailable");
+        return response.json() as Promise<{ title?: string }>;
+      })
+      .then((result) => {
+        if (result.title) setThreadTitle(threadId, result.title);
+      })
+      .catch((titleError) => {
+        console.warn("Shiva AI could not update this chat title:", titleError);
+      });
   }, [messages, status, threadId]);
 
   useEffect(() => {
