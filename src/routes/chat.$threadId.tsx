@@ -142,8 +142,8 @@ function ChatPage() {
                 <p className="mr-auto animate-pulse text-sm text-muted-foreground">Thinking…</p>
               )}
               {error && (
-                <p className="mr-auto rounded-xl bg-destructive/15 px-4 py-3 text-sm text-destructive">
-                  Something went wrong. Please try again in a moment.
+                <p role="alert" className="mr-auto max-w-[92%] rounded-xl bg-destructive/15 px-4 py-3 text-sm text-destructive">
+                  {error.message || "The request failed. Check your connection and AI provider configuration, then try again."}
                 </p>
               )}
               <div ref={endRef} />
