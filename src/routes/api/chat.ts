@@ -53,10 +53,21 @@ export const Route = createFileRoute("/api/chat")({
             ? createGroqProvider(groqKey!)("openai/gpt-oss-120b")
             : createLovableAiGatewayProvider(lovableKey!)("google/gemini-3.6-flash");
 
+          // Reasoning parts returned by reasoning-capable models must not be
+          // replayed to OpenAI-compatible providers as reasoning_content.
+          // Keep the visible conversation text and tool history, but omit
+          // private reasoning parts before converting the UI messages.
+          const conversation = (messages as UIMessage[]).map((message) => ({
+            ...message,
+            parts: message.parts.filter((part) => part.type !== "reasoning"),
+          }));
+
+          const modelMessages = await convertToModelMessages(conversation);
+
           const result = streamText({
             model,
             system: SYSTEM_PROMPT + notesBlock,
-            messages: await convertToModelMessages(messages as UIMessage[]),
+            messages: modelMessages,
           });
 
           return result.toUIMessageStreamResponse({
