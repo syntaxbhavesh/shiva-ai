@@ -150,6 +150,7 @@ function ChatPage() {
       <ShivaSidebar activeThreadId={threadId} />
 
       <main className="relative z-10 ml-14 flex min-h-[100svh] flex-col items-center px-3 sm:px-5">
+        {!quizMode && <div className="flex w-full max-w-2xl justify-end pt-3"><button type="button" onClick={() => setQuizMode(true)} className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3.5 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/15 active:scale-[.98]"><CircleHelp className="h-4 w-4" /> Create a quiz</button></div>}
         {quizMode ? (
           <QuizBuilder onClose={() => setQuizMode(false)} />
         ) : empty ? (
