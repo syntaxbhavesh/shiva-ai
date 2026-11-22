@@ -63,7 +63,7 @@ export function ShivaAccount() {
     });
 
     const handleBookstoreMessage = async (event: MessageEvent) => {
-      if (event.origin !== "https://bookstore-net.vercel.app") return;
+      if (event.origin !== "https://bookstore-nt.vercel.app") return;
       if (ssoPopup.current && event.source !== ssoPopup.current) return;
       if (event.data?.type !== "BOOKSTORE_SSO_TOKEN" || typeof event.data.idToken !== "string") return;
       setBusy(true);
@@ -100,7 +100,7 @@ export function ShivaAccount() {
   function startBookstoreSync() {
     setError("");
     const popup = window.open(
-      "https://bookstore-net.vercel.app/?shiva_sso=1",
+      "https://bookstore-nt.vercel.app/?shiva_sso=1",
       "bookstore-sso",
       "popup=yes,width=520,height=720"
     );
@@ -205,7 +205,7 @@ export function ShivaAccount() {
                 <h2 className="text-2xl font-semibold text-white">BOOKStore Profile</h2>
                 <div className="my-5 flex flex-col items-center gap-2">{user.photoURL ? <img src={user.photoURL} alt="" className="h-16 w-16 rounded-full" /> : <CircleUserRound className="h-16 w-16 text-white/45" />}<p className="font-semibold text-white">{user.displayName || "BOOKStore User"}</p><p className="text-sm text-white/55">{user.email}</p></div>
                 <p className="mb-5 text-xs text-white/55">Your Shiva AI sign-in uses the same Firebase Authentication account as BOOKStore.</p>
-                <a href="https://bookstore-net.vercel.app" target="_blank" rel="noreferrer" className="block rounded-xl bg-[#6251dc] px-4 py-3 font-semibold text-white transition hover:bg-[#7162e8]">Open BOOKStore</a>
+                <a href="https://bookstore-nt.vercel.app" target="_blank" rel="noreferrer" className="block rounded-xl bg-[#6251dc] px-4 py-3 font-semibold text-white transition hover:bg-[#7162e8]">Open BOOKStore</a>
               </div>
             ) : (
               <>
