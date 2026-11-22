@@ -1,13 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { FileText, Loader2, Plus, SendHorizontal, Sparkles, BookOpen, Lightbulb, Atom, X, ChevronDown } from "lucide-react";
+import { FileText, Loader2, Plus, SendHorizontal, Sparkles, BookOpen, Lightbulb, Atom, X, ChevronDown, CircleHelp } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { ShivaSidebar } from "@/components/ShivaSidebar";
 import { ensureThread, persistThread, setThreadTitle } from "@/lib/chat-store";
 import { addNote, loadNotes, removeNote, retrieveContext, type NoteDoc } from "@/lib/notes-store";
 import { extractFileText } from "@/lib/pdf-text";
+import { QuizBuilder } from "@/components/QuizBuilder";
 
 
 export const Route = createFileRoute("/chat/$threadId")({
@@ -35,6 +36,7 @@ function ChatPage() {
   const { threadId } = Route.useParams();
   const initial = useMemo(() => ensureThread(threadId), [threadId]);
   const [input, setInput] = useState("");
+  const [quizMode, setQuizMode] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -148,7 +150,9 @@ function ChatPage() {
       <ShivaSidebar activeThreadId={threadId} />
 
       <main className="relative z-10 ml-14 flex min-h-[100svh] flex-col items-center px-3 sm:px-5">
-        {empty ? (
+        {quizMode ? (
+          <QuizBuilder onClose={() => setQuizMode(false)} />
+        ) : empty ? (
           <div className="flex w-full max-w-2xl flex-1 flex-col justify-center gap-7 py-8">
             <div className="space-y-3 text-center">
               <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-lg shadow-primary/10"><Sparkles className="h-7 w-7" /></div>
@@ -167,11 +171,18 @@ function ChatPage() {
                   <span className="text-xs font-medium text-foreground">{title}</span>
                 </button>
               ))}
+              <button type="button" onClick={() => setQuizMode(true)} className="group col-span-2 flex min-h-16 items-center gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-4 text-left transition-all hover:border-primary/60 hover:bg-primary/10 active:scale-[.99]">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary"><CircleHelp className="h-5 w-5" /></span>
+                <span><span className="block text-sm font-semibold">Create an interactive quiz</span><span className="block text-xs text-muted-foreground">Choose a topic, answer questions and see your score</span></span>
+              </button>
             </div>
           </div>
         ) : (
           <>
-            <h1 className="pt-6 text-lg font-semibold tracking-tight">Shiva AI</h1>
+            <div className="flex w-full max-w-2xl items-center justify-between pt-6">
+              <h1 className="text-lg font-semibold tracking-tight">Shiva AI</h1>
+              <button type="button" onClick={() => setQuizMode(true)} className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:border-primary/40 hover:text-foreground"><CircleHelp className="h-3.5 w-3.5" /> Create quiz</button>
+            </div>
             <section className="mt-4 flex w-full max-w-2xl flex-1 flex-col gap-4 overflow-y-auto pb-4">
               {messages.map((m) => {
                 const text = m.parts
