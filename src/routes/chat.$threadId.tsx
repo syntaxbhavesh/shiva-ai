@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { FileText, Loader2, Plus, SendHorizontal, Sparkles, BookOpen, Lightbulb, Atom, X } from "lucide-react";
+import { FileText, Loader2, Plus, SendHorizontal, Sparkles, BookOpen, Lightbulb, Atom, X, ChevronDown } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { ShivaSidebar } from "@/components/ShivaSidebar";
