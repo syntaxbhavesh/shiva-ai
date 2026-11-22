@@ -285,6 +285,9 @@ function ChatPage() {
             </button>
           </form>
           <p className="mt-2 text-center text-[10px] text-muted-foreground/75">Shiva AI can make mistakes. Check important information.</p>
+          <p className="mt-3 text-center text-xs text-muted-foreground">
+            Powered by <span className="font-semibold tracking-wide text-primary">BOOKStore</span>
+          </p>
         </div>
 
       </main>
