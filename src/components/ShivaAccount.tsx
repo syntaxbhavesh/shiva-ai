@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithCustomToken,
   signOut,
   updateProfile,
   type User,
@@ -26,39 +27,90 @@ export function ShivaAccount() {
   const [displayName, setDisplayName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const ssoPopup = useRef<Window | null>(null);
 
-  useEffect(() => onAuthStateChanged(bookstoreAuth, async (currentUser) => {
-    setUser(currentUser);
-    if (!currentUser) return;
-    const userRef = ref(bookstoreDatabase, `users/${currentUser.uid}`);
-    try {
-      const snapshot = await get(userRef);
-      const device = typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 180) : "Unknown";
-      if (!snapshot.exists()) {
-        await set(userRef, {
-          displayName: currentUser.displayName || currentUser.email?.split("@")[0] || "BOOKStore User",
-          email: currentUser.email || "",
-          photoURL: currentUser.photoURL || "",
-          createdAt: serverTimestamp(),
-          lastSeen: serverTimestamp(),
-          device,
-          from: "Shiva-AI",
-        });
-      } else {
-        // Preserve all existing BOOKStore fields (XP, subscription, goals, block status, etc.).
-        await update(userRef, {
-          displayName: currentUser.displayName || currentUser.email?.split("@")[0] || "BOOKStore User",
-          email: currentUser.email || "",
-          photoURL: currentUser.photoURL || "",
-          lastSeen: serverTimestamp(),
-          device,
-          from: "Shiva-AI",
-        });
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(bookstoreAuth, async (currentUser) => {
+      setUser(currentUser);
+      if (!currentUser) return;
+      const userRef = ref(bookstoreDatabase, `users/${currentUser.uid}`);
+      try {
+        const snapshot = await get(userRef);
+        const device = typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 180) : "Unknown";
+        if (!snapshot.exists()) {
+          await set(userRef, {
+            displayName: currentUser.displayName || currentUser.email?.split("@")[0] || "BOOKStore User",
+            email: currentUser.email || "",
+            photoURL: currentUser.photoURL || "",
+            createdAt: serverTimestamp(),
+            lastSeen: serverTimestamp(),
+            device,
+            from: "Shiva-AI",
+          });
+        } else {
+          await update(userRef, {
+            displayName: currentUser.displayName || currentUser.email?.split("@")[0] || "BOOKStore User",
+            email: currentUser.email || "",
+            photoURL: currentUser.photoURL || "",
+            lastSeen: serverTimestamp(),
+            device,
+            from: "Shiva-AI",
+          });
+        }
+      } catch (syncError) {
+        console.error("BOOKStore account sync failed:", syncError);
       }
-    } catch (syncError) {
-      console.error("BOOKStore account sync failed:", syncError);
+    });
+
+    const handleBookstoreMessage = async (event: MessageEvent) => {
+      if (event.origin !== "https://bookstore-nt.vercel.app") return;
+      if (ssoPopup.current && event.source !== ssoPopup.current) return;
+      if (event.data?.type !== "BOOKSTORE_SSO_TOKEN" || typeof event.data.idToken !== "string") return;
+      setBusy(true);
+      setError("");
+      try {
+        const response = await fetch("/api/auth/exchange", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken: event.data.idToken }),
+        });
+        const payload = await response.json() as { customToken?: string; error?: string };
+        if (!response.ok || !payload.customToken) {
+          throw new Error(payload.error || "Could not verify your BOOKStore session.");
+        }
+        await signInWithCustomToken(bookstoreAuth, payload.customToken);
+        ssoPopup.current?.close();
+        ssoPopup.current = null;
+        setMenuOpen(false);
+        setAuthOpen(false);
+      } catch (syncError) {
+        setError(syncError instanceof Error ? syncError.message : "BOOKStore account sync failed.");
+      } finally {
+        setBusy(false);
+      }
+    };
+
+    window.addEventListener("message", handleBookstoreMessage);
+    return () => {
+      unsubscribe();
+      window.removeEventListener("message", handleBookstoreMessage);
+    };
+  }, []);
+
+  function startBookstoreSync() {
+    setError("");
+    const popup = window.open(
+      "https://bookstore-nt.vercel.app/?shiva_sso=1",
+      "bookstore-sso",
+      "popup=yes,width=520,height=720"
+    );
+    if (!popup) {
+      setError("Your browser blocked the BOOKStore sync window. Allow popups and try again.");
+      return;
     }
-  }), []);
+    ssoPopup.current = popup;
+    setBusy(true);
+  }
 
   async function runAuth(action: () => Promise<unknown>) {
     setBusy(true);
@@ -130,7 +182,7 @@ export function ShivaAccount() {
               ) : (
                 <>
                   <button onClick={() => openAuth("login")} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] hover:bg-white/[.07]"><UserRound className="h-5 w-5 text-white/75" /> Login</button>
-                  <button onClick={() => openAuth("login")} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] hover:bg-white/[.07]"><BookOpen className="h-5 w-5 text-white/75" /> Sync BOOKStore Account</button>
+                  <button onClick={startBookstoreSync} disabled={busy} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] hover:bg-white/[.07] disabled:opacity-50"><BookOpen className="h-5 w-5 text-white/75" /> {busy ? "Connecting to BOOKStore..." : "Sync BOOKStore Account"}</button>
                   <button onClick={() => openAuth("register")} className="mt-2 w-full rounded-xl bg-white px-3 py-3 text-sm font-semibold text-black hover:bg-white/90">Create account</button>
                 </>
               )}
@@ -157,10 +209,10 @@ export function ShivaAccount() {
               </div>
             ) : (
               <>
-                <h2 className="mb-6 text-center text-2xl font-semibold">Please Enter your Details</h2>
+                <h2 className="mb-6 text-center text-2xl font-semibold text-white">Please Enter your Details</h2>
                 <form onSubmit={submitEmail} className="space-y-3">
                   {mode === "register" && <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Full name" autoComplete="name" className="w-full rounded-xl border border-white/10 bg-[#111214] px-4 py-4 text-white placeholder:text-white/40 outline-none transition focus:border-[#8172ff] focus:ring-2 focus:ring-[#8172ff]/20" />}
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email Address" autoComplete="email" required className="w-full rounded-xl border border-gray-200 bg-white px-4 py-4 outline-none focus:border-[#6251dc]" />
+                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email Address" autoComplete="email" required className="w-full rounded-xl border border-white/10 bg-[#111214] px-4 py-4 text-white placeholder:text-white/40 outline-none transition focus:border-[#8172ff] focus:ring-2 focus:ring-[#8172ff]/20" />
                   <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={6} required className="w-full rounded-xl border border-gray-200 bg-white px-4 py-4 outline-none focus:border-[#6251dc]" />
                   {error && <p role="alert" className="rounded-lg border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}
                   <button disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#6251dc] to-[#5141c9] px-4 py-4 font-semibold text-white disabled:opacity-60">{busy && <Loader2 className="h-4 w-4 animate-spin" />}{mode === "login" ? "Login" : "Create Account"}</button>
