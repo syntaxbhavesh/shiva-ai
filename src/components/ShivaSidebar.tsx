@@ -3,6 +3,7 @@ import { MessageCircle, PencilLine, Search, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import logo from "@/assets/shiva-logo.png";
 import { deleteThread, loadThreads, newThreadId, type Thread } from "@/lib/chat-store";
+import { ShivaAccount } from "@/components/ShivaAccount";
 
 type Panel = "conversations" | "search" | null;
 
@@ -39,6 +40,7 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
 
   return (
     <>
+      <ShivaAccount />
       <aside className="fixed left-0 top-0 z-40 flex h-full w-14 animate-[slide-in-left_0.35s_ease-out] flex-col items-center gap-6 bg-sidebar/60 pt-4 backdrop-blur-sm transition-colors">
         <Link to="/" aria-label="Shiva AI home" className="group">
           <img
