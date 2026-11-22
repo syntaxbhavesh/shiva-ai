@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { ChevronDown, FileText, Loader2, Plus, SendHorizontal, X } from "lucide-react";
+import { FileText, Loader2, Plus, SendHorizontal, Sparkles, BookOpen, Lightbulb, Atom, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { ShivaSidebar } from "@/components/ShivaSidebar";
@@ -147,10 +147,27 @@ function ChatPage() {
       />
       <ShivaSidebar activeThreadId={threadId} />
 
-      <main className="relative z-10 ml-14 flex min-h-screen flex-col items-center px-4">
+      <main className="relative z-10 ml-14 flex min-h-[100svh] flex-col items-center px-3 sm:px-5">
         {empty ? (
-          <div className="flex flex-1 items-center justify-center">
-            <h1 className="text-4xl font-semibold tracking-tight">Shiva AI</h1>
+          <div className="flex w-full max-w-2xl flex-1 flex-col justify-center gap-7 py-8">
+            <div className="space-y-3 text-center">
+              <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-lg shadow-primary/10"><Sparkles className="h-7 w-7" /></div>
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">What are we learning today?</h1>
+              <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">Ask a question, explore a concept, or get help with your study plan.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              {[
+                { icon: BookOpen, title: "Explain a concept", prompt: "Explain a difficult concept in simple steps with an example." },
+                { icon: Lightbulb, title: "Give me ideas", prompt: "Give me some creative ideas to improve my learning." },
+                { icon: Atom, title: "Solve a problem", prompt: "Help me solve a physics or chemistry problem step by step." },
+                { icon: Sparkles, title: "Make a study plan", prompt: "Help me make a realistic study plan for today." },
+              ].map(({ icon: Icon, title, prompt }) => (
+                <button key={title} type="button" onClick={() => setInput(prompt)} className="group flex min-h-24 flex-col items-start justify-between rounded-2xl border border-border/70 bg-card/70 p-3.5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card active:scale-[.98]">
+                  <Icon className="h-4 w-4 text-primary transition-transform group-hover:scale-110" />
+                  <span className="text-xs font-medium text-foreground">{title}</span>
+                </button>
+              ))}
+            </div>
           </div>
         ) : (
           <>
@@ -163,14 +180,14 @@ function ChatPage() {
                 return m.role === "user" ? (
                   <p
                     key={m.id}
-                    className="ml-auto max-w-[85%] whitespace-pre-wrap rounded-2xl bg-primary px-4 py-3 text-sm text-primary-foreground"
+                    className="ml-auto max-w-[88%] whitespace-pre-wrap rounded-[1.35rem] rounded-br-md border border-primary/20 bg-primary px-4 py-3 text-[14px] leading-relaxed text-primary-foreground shadow-sm sm:max-w-[82%]"
                   >
                     {text}
                   </p>
                 ) : (
                   <div
                     key={m.id}
-                    className="mr-auto max-w-[92%] space-y-3 text-sm leading-relaxed text-foreground [&_code]:rounded [&_code]:bg-secondary [&_code]:px-1.5 [&_code]:py-0.5 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:text-base [&_h2]:font-semibold [&_h3]:font-semibold [&_li]:ml-5 [&_ol]:list-decimal [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-secondary [&_pre]:p-4 [&_ul]:list-disc"
+                    className="mr-auto w-full max-w-[96%] space-y-3 rounded-2xl rounded-tl-md border border-border/60 bg-card/55 px-4 py-3.5 text-[14px] leading-7 text-foreground shadow-sm [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-secondary [&_code]:px-1.5 [&_code]:py-0.5 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:text-base [&_h2]:font-semibold [&_h3]:font-semibold [&_li]:ml-5 [&_ol]:list-decimal [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-secondary [&_pre]:p-4 [&_ul]:list-disc"
                   >
                     <ReactMarkdown>{text}</ReactMarkdown>
                   </div>
@@ -218,7 +235,7 @@ function ChatPage() {
 
           <form
             onSubmit={submit}
-            className="flex items-center gap-3 rounded-full bg-card px-4 py-3 shadow-2xl"
+            className="flex items-end gap-2 rounded-[1.7rem] border border-border/80 bg-card/95 px-3 py-2.5 shadow-[0_12px_40px_-18px_rgba(0,0,0,.7)] backdrop-blur-xl transition-colors focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 sm:gap-3 sm:px-4"
           >
             <input
               ref={fileRef}
@@ -262,14 +279,12 @@ function ChatPage() {
               type="submit"
               disabled={isBusy || !input.trim()}
               aria-label="Send message"
-              className="text-foreground transition-opacity disabled:opacity-40"
+              className="mb-1 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-md shadow-primary/20 transition-all hover:brightness-110 active:scale-95 disabled:bg-secondary disabled:text-muted-foreground disabled:shadow-none"
             >
               <SendHorizontal className="h-5 w-5" />
             </button>
           </form>
-          <p className="mt-3 text-center text-xs text-muted-foreground">
-            Powered by <span className="font-semibold text-accent">BOOKStore</span>
-          </p>
+          <p className="mt-2 text-center text-[10px] text-muted-foreground/75">Shiva AI can make mistakes. Check important information.</p>
         </div>
 
       </main>
