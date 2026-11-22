@@ -50,7 +50,7 @@ export const Route = createFileRoute("/api/chat")({
             : "\n\nSTUDENT NOTES: none relevant for this question.";
 
           const model = useGroq
-            ? createGroqProvider(groqKey!)("llama-3.3-70b-versatile")
+            ? createGroqProvider(groqKey!)("openai/gpt-oss-120b")
             : createLovableAiGatewayProvider(lovableKey!)("google/gemini-3.6-flash");
 
           const result = streamText({
@@ -65,7 +65,7 @@ export const Route = createFileRoute("/api/chat")({
         } catch (error) {
           console.error("Shiva AI /api/chat error:", error);
           const message = error instanceof Error ? error.message : "Unknown AI provider error";
-          return new Response(`AI request failed: ${message}`, { status: 500 });
+          return Response.json({ error: "AI request failed", detail: message.slice(0, 500) }, { status: 500 });
         }
       },
     },
