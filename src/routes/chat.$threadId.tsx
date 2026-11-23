@@ -32,7 +32,7 @@ export const Route = createFileRoute("/chat/$threadId")({
   component: ChatPage,
 });
 
-function ChatPage() {
+function ChatPage() {\n  const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const { threadId } = Route.useParams();
   const initial = useMemo(() => ensureThread(threadId), [threadId]);
   const [input, setInput] = useState("");
@@ -147,9 +147,9 @@ function ChatPage() {
         className="pointer-events-none absolute left-1/2 top-1/2 h-[500px] w-[700px] -translate-x-1/2 -translate-y-1/2 blur-3xl"
         style={{ background: "var(--glow)" }}
       />
-      <ShivaSidebar activeThreadId={threadId} />
+      <ShivaSidebar activeThreadId={threadId} onExpandedChange={setSidebarExpanded} />
 
-      <main className="relative z-10 ml-14 flex min-h-[100svh] flex-col items-center px-3 sm:px-5">
+      <main className={`relative z-10 flex min-h-[100svh] flex-col items-center px-3 transition-[margin] duration-200 sm:px-5 ${sidebarExpanded ? "ml-64" : "ml-14"}`}>
         {!quizMode && <div className="flex w-full max-w-2xl justify-end pt-3"><button type="button" onClick={() => setQuizMode(true)} className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3.5 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/15 active:scale-[.98]"><CircleHelp className="h-4 w-4" /> Create a quiz</button></div>}
         {quizMode ? (
           <QuizBuilder onClose={() => setQuizMode(false)} />
