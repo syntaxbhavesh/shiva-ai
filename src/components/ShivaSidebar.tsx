@@ -15,7 +15,7 @@ import { ShivaAccount } from "@/components/ShivaAccount";
 
 type Panel = "conversations" | "search" | null;
 
-export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
+export function ShivaSidebar({ activeThreadId, onExpandedChange }: { activeThreadId?: string; onExpandedChange?: (expanded: boolean) => void }) {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const [logoHovered, setLogoHovered] = useState(false);
@@ -64,7 +64,7 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
           {logoHovered ? (
             <button
               type="button"
-              onClick={() => setExpanded((value) => !value)}
+              onClick={() => setExpanded((value) => { onExpandedChange?.(!value); return !value; })}
               aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
               title={expanded ? "Collapse sidebar" : "Expand sidebar"}
               className={`flex h-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground ${expanded ? "w-full justify-start px-2" : "w-9"}`}
