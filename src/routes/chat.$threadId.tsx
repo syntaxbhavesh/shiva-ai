@@ -32,7 +32,8 @@ export const Route = createFileRoute("/chat/$threadId")({
   component: ChatPage,
 });
 
-function ChatPage() {\n  const [sidebarExpanded, setSidebarExpanded] = useState(false);
+function ChatPage() {
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const { threadId } = Route.useParams();
   const initial = useMemo(() => ensureThread(threadId), [threadId]);
   const [input, setInput] = useState("");
