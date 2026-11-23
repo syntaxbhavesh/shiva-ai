@@ -16,7 +16,7 @@ import { bookstoreAuth, bookstoreDatabase } from "@/lib/bookstore-firebase";
 
 type AuthMode = "login" | "register";
 
-export function ShivaAccount() {
+export function ShivaAccount({ expanded = false }: { expanded?: boolean }) {
   const [user, setUser] = useState<User | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
@@ -163,7 +163,7 @@ export function ShivaAccount() {
 
   return (
     <>
-      <div className="fixed bottom-4 left-2 z-[60]">
+      <div className="fixed bottom-3 left-2 z-[60]">
         {menuOpen && (
           <>
             <button aria-label="Close account menu" className="fixed inset-0 z-[-1] cursor-default" onClick={() => setMenuOpen(false)} />
@@ -189,9 +189,9 @@ export function ShivaAccount() {
             </section>
           </>
         )}
-        <button onClick={() => setMenuOpen((open) => !open)} aria-label="Account menu" aria-expanded={menuOpen} className="flex items-center gap-2 rounded-full border border-white/10 bg-[#171717] p-2.5 pr-3 text-white shadow-lg transition hover:bg-[#262626]">
-          {user?.photoURL ? <img src={user.photoURL} alt="" className="h-7 w-7 rounded-full object-cover" /> : <CircleUserRound className="h-7 w-7 text-white/80" />}
-          <span className="hidden max-w-28 truncate text-xs font-medium sm:block">{user?.displayName || user?.email?.split("@")[0] || "Guest"}</span>
+        <button onClick={() => setMenuOpen((open) => !open)} aria-label="Account menu" aria-expanded={menuOpen} className={`flex items-center gap-2 rounded-full border border-white/10 bg-[#171717] p-1.5 text-white shadow-lg transition hover:bg-[#262626] ${expanded ? "w-[calc(16rem-16px)] justify-start px-2.5" : "w-10 justify-center"}`}>
+          {user?.photoURL ? <img src={user.photoURL} alt="" className="h-6 w-6 rounded-full object-cover" /> : <CircleUserRound className="h-6 w-6 text-white/80" />}
+          <span className={`min-w-0 truncate text-xs font-medium ${expanded ? "block" : "hidden"}`}>{user?.displayName || user?.email?.split("@")[0] || "Guest"}</span>
         </button>
       </div>
 
