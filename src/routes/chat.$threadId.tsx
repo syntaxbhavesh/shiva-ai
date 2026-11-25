@@ -37,7 +37,7 @@ function ChatPage() {
   const initial = useMemo(() => ensureThread(threadId), [threadId]);
   const [input, setInput] = useState("");
   const [quizMode, setQuizMode] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const lastTitleMessageCount = useRef(0);
@@ -247,7 +247,7 @@ function ChatPage() {
 
           <form
             onSubmit={submit}
-            className="flex items-end gap-2 rounded-[1.7rem] border border-border/80 bg-card/95 px-3 py-2.5 shadow-[0_12px_40px_-18px_rgba(0,0,0,.7)] backdrop-blur-xl transition-colors focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 sm:gap-3 sm:px-4"
+            className="mx-auto flex w-full min-w-0 items-end gap-2 rounded-[1.75rem] border border-border/80 bg-card/95 px-3 py-3 shadow-[0_12px_40px_-18px_rgba(0,0,0,.7)] backdrop-blur-xl transition-all focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 sm:gap-3 sm:px-4"
           >
             <input
               ref={fileRef}
@@ -264,36 +264,41 @@ function ChatPage() {
               onClick={() => fileRef.current?.click()}
               title="Upload notes or PDFs"
               aria-label="Upload notes or PDFs"
-              className="text-muted-foreground transition-colors hover:text-foreground"
+              className="mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
-              {uploading ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <Plus className="h-5 w-5" />
-              )}
+              {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
             </button>
-            <input
+            <textarea
               ref={inputRef}
               id="chat-message"
               name="message"
+              rows={1}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={
-                notes.length > 0 ? "Ask about your notes..." : "Ask Shiva anything..."
-              }
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              onChange={(e) => {
+                setInput(e.target.value);
+                e.currentTarget.style.height = "auto";
+                e.currentTarget.style.height = `${Math.min(e.currentTarget.scrollHeight, 144)}px`;
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  e.currentTarget.form?.requestSubmit();
+                }
+              }}
+              placeholder={notes.length > 0 ? "Ask about your notes..." : "Ask Shiva anything..."}
+              className="max-h-36 min-h-9 min-w-0 flex-1 resize-none self-center bg-transparent py-2 text-[15px] leading-5 text-foreground outline-none placeholder:text-muted-foreground"
             />
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              1.0 Rudra
-              <ChevronDown className="h-3.5 w-3.5" />
+            <span className="mb-1 hidden shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11px] text-muted-foreground sm:inline-flex">
+              Rudra <ChevronDown className="h-3.5 w-3.5" />
             </span>
             <button
               type="submit"
               disabled={isBusy || !input.trim()}
               aria-label="Send message"
-              className="mb-1 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-md shadow-primary/20 transition-all hover:brightness-110 active:scale-95 disabled:bg-secondary disabled:text-muted-foreground disabled:shadow-none"
+              title="Send message"
+              className="mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-95 disabled:bg-secondary disabled:text-muted-foreground disabled:shadow-none"
             >
-              <SendHorizontal className="h-5 w-5" />
+              <SendHorizontal className="h-[18px] w-[18px]" />
             </button>
           </form>
           <p className="mt-2 text-center text-[10px] text-muted-foreground/75">Shiva AI can make mistakes. Check important information.</p>
