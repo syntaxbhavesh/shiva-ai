@@ -51,6 +51,7 @@ function ChatPage() {
   const [pendingImages, setPendingImages] = useState<File[]>([]);
   const [documentContext, setDocumentContext] = useState<{ name: string; text: string }[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
 
   const { messages, sendMessage, setMessages, status, error } = useChat({
     id: threadId,
@@ -202,6 +203,18 @@ function ChatPage() {
     const files = pendingImages;
     setDocumentContext([]);
     setPendingImages([]);
+
+    if (editingMessageIndex !== null) {
+      // Replace the edited user turn and discard all later turns, including
+      // the previous assistant answer, before requesting a fresh response.
+      const historyBeforeEdit = messages.slice(0, editingMessageIndex);
+      setMessages(historyBeforeEdit);
+      lastTitleMessageCount.current = 0;
+      setEditingMessageIndex(null);
+      void sendMessage({ text, files }, { body: { noteContext } });
+      return;
+    }
+
     void sendMessage({ text, files }, { body: { noteContext } });
   }
 
@@ -262,7 +275,7 @@ function ChatPage() {
               }}
               className="mt-4 flex w-full max-w-2xl flex-1 flex-col gap-4 overflow-y-auto pb-4"
             >
-              {messages.map((m) => {
+              {messages.map((m, messageIndex) => {
                 const text = m.parts
                   .map((p) => (p.type === "text" ? p.text : ""))
                   .join("");
@@ -270,7 +283,7 @@ function ChatPage() {
                   <div key={m.id} className="ml-auto max-w-[88%] sm:max-w-[82%]">
                     <div className="whitespace-pre-wrap rounded-[1.35rem] rounded-br-md border border-primary/20 bg-primary px-4 py-3 text-[14px] leading-relaxed text-primary-foreground shadow-sm">{text}</div>
                     <div className="mt-1 flex justify-end gap-1">
-                      <button type="button" onClick={() => { setInput(text); inputRef.current?.focus(); }} title="Edit message" aria-label="Edit message" className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"><Pencil className="h-3.5 w-3.5" /></button>
+                      <button type="button" onClick={() => { setEditingMessageIndex(messageIndex); setInput(text); inputRef.current?.focus(); }} title="Edit message" aria-label="Edit message" className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"><Pencil className="h-3.5 w-3.5" /></button>
                       <button type="button" onClick={() => void copyMessage(m.id, text)} title="Copy message" aria-label="Copy message" className="inline-flex items-center gap-1 rounded-lg p-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground">{copiedId === m.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}{copiedId === m.id ? "Copied" : ""}</button>
                     </div>
                   </div>
@@ -343,6 +356,15 @@ function ChatPage() {
             </div>
           )}
 
+          {editingMessageIndex !== null && (
+            <div className="mx-auto mb-2 flex w-full max-w-2xl items-center justify-between rounded-xl border border-primary/25 bg-primary/5 px-3 py-2 text-xs text-primary">
+              <span>Editing message · sending will replace it and regenerate Shiva AI's reply.</span>
+              <button type="button" onClick={() => { setEditingMessageIndex(null); setInput(""); }} className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" aria-label="Cancel editing" title="Cancel editing">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
           <form
             onSubmit={submit}
             className="mx-auto flex w-full min-w-0 items-end gap-2 rounded-[1.75rem] border border-border/80 bg-card/95 px-3 py-3 shadow-[0_12px_40px_-18px_rgba(0,0,0,.7)] backdrop-blur-xl transition-all focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 sm:gap-3 sm:px-4"
@@ -392,8 +414,8 @@ function ChatPage() {
             <button
               type="submit"
               disabled={isBusy || !input.trim()}
-              aria-label="Send message"
-              title="Send message"
+              aria-label={editingMessageIndex !== null ? "Replace message and regenerate" : "Send message"}
+              title={editingMessageIndex !== null ? "Replace message and regenerate" : "Send message"}
               className="mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-95 disabled:bg-secondary disabled:text-muted-foreground disabled:shadow-none"
             >
               <SendHorizontal className="h-[18px] w-[18px]" />
