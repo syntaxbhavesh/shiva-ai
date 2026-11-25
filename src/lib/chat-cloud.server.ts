@@ -6,7 +6,12 @@ type ServiceAccount = { project_id?: string; client_email?: string; private_key?
 
 function parseServiceAccount(raw: string | undefined, label: string): ServiceAccount {
   if (!raw) throw new Error(`${label}_NOT_CONFIGURED`);
-  const value = JSON.parse(raw) as ServiceAccount;
+  let value: ServiceAccount;
+  try {
+    value = JSON.parse(raw) as ServiceAccount;
+  } catch {
+    throw new Error(`${label}_MUST_BE_SERVICE_ACCOUNT_JSON_NOT_NODE_CODE`);
+  }
   if (!value.project_id || !value.client_email || !value.private_key) {
     throw new Error(`${label}_INVALID`);
   }
