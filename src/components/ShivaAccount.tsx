@@ -16,7 +16,7 @@ import { bookstoreAuth, bookstoreDatabase } from "@/lib/bookstore-firebase";
 
 type AuthMode = "login" | "register";
 
-export function ShivaAccount() {
+export function ShivaAccount({ expanded = false }: { expanded?: boolean }) {
   const [user, setUser] = useState<User | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
@@ -163,35 +163,35 @@ export function ShivaAccount() {
 
   return (
     <>
-      <div className="fixed bottom-4 left-2 z-[60]">
+      <div className="relative w-full">
         {menuOpen && (
           <>
-            <button aria-label="Close account menu" className="fixed inset-0 z-[-1] cursor-default" onClick={() => setMenuOpen(false)} />
-            <section className="absolute bottom-[calc(100%+10px)] left-0 w-[min(340px,calc(100vw-24px))] overflow-hidden rounded-[24px] border border-white/10 bg-[#252525] p-3 text-white shadow-[0_18px_70px_rgba(0,0,0,.65)] animate-[fade-in_.16s_ease-out]">
-              <button onClick={() => { setProfileOpen(true); setMenuOpen(false); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-white/[.07]">
-                {user?.photoURL ? <img src={user.photoURL} alt="" className="h-10 w-10 rounded-full object-cover" /> : <span className="grid h-10 w-10 place-items-center rounded-full bg-white/10"><CircleUserRound className="h-6 w-6" /></span>}
-                <span className="min-w-0 flex-1"><span className="block truncate text-[15px] font-semibold">{user?.displayName || user?.email?.split("@")[0] || "Guest"}</span><span className="block truncate text-sm text-white/55">{user ? user.email : "Not signed in"}</span></span>
-                <ChevronRight className="h-5 w-5 text-white/50" />
+            <button aria-label="Close account menu" className="fixed inset-0 z-[59] cursor-default" onClick={() => setMenuOpen(false)} />
+            <section className="absolute bottom-[calc(100%+10px)] left-0 z-[61] w-[min(340px,calc(100vw-24px))] overflow-hidden rounded-2xl border border-border bg-sidebar p-2 text-foreground shadow-2xl animate-[fade-in_.16s_ease-out]">
+              <button onClick={() => { setProfileOpen(true); setMenuOpen(false); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-secondary">
+                {user?.photoURL ? <img src={user.photoURL} alt="" className="h-9 w-9 rounded-full object-cover" /> : <span className="grid h-9 w-9 place-items-center rounded-full bg-secondary"><CircleUserRound className="h-5 w-5" /></span>}
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{user?.displayName || user?.email?.split("@")[0] || "Guest"}</span><span className="block truncate text-xs text-muted-foreground">{user ? user.email : "Not signed in"}</span></span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </button>
-              <div className="my-2 border-t border-white/10" />
+              <div className="my-1 border-t border-border" />
               {user ? (
                 <>
-                  <button onClick={() => { setProfileOpen(true); setMenuOpen(false); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] hover:bg-white/[.07]"><UserRound className="h-5 w-5 text-white/75" /> Profile</button>
-                  <button onClick={() => void runAuth(() => signOut(bookstoreAuth))} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] text-red-300 hover:bg-white/[.07]"><LogOut className="h-5 w-5" /> Log out</button>
+                  <button onClick={() => { setProfileOpen(true); setMenuOpen(false); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"><UserRound className="h-[18px] w-[18px]" /> Profile</button>
+                  <button onClick={() => void runAuth(() => signOut(bookstoreAuth))} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-400 transition-colors hover:bg-secondary"><LogOut className="h-[18px] w-[18px]" /> Log out</button>
                 </>
               ) : (
                 <>
-                  <button onClick={() => openAuth("login")} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] hover:bg-white/[.07]"><UserRound className="h-5 w-5 text-white/75" /> Login</button>
-                  <button onClick={startBookstoreSync} disabled={busy} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] hover:bg-white/[.07] disabled:opacity-50"><BookOpen className="h-5 w-5 text-white/75" /> {busy ? "Connecting to BOOKStore..." : "Sync BOOKStore Account"}</button>
-                  <button onClick={() => openAuth("register")} className="mt-2 w-full rounded-xl bg-white px-3 py-3 text-sm font-semibold text-black hover:bg-white/90">Create account</button>
+                  <button onClick={() => openAuth("login")} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"><UserRound className="h-[18px] w-[18px]" /> Login</button>
+                  <button onClick={startBookstoreSync} disabled={busy} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"><BookOpen className="h-[18px] w-[18px]" /> {busy ? "Connecting to BOOKStore..." : "Sync BOOKStore Account"}</button>
+                  <button onClick={() => openAuth("register")} className="mt-1 w-full rounded-xl bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90">Create account</button>
                 </>
               )}
             </section>
           </>
         )}
-        <button onClick={() => setMenuOpen((open) => !open)} aria-label="Account menu" aria-expanded={menuOpen} className="flex items-center gap-2 rounded-full border border-white/10 bg-[#171717] p-2.5 pr-3 text-white shadow-lg transition hover:bg-[#262626]">
-          {user?.photoURL ? <img src={user.photoURL} alt="" className="h-7 w-7 rounded-full object-cover" /> : <CircleUserRound className="h-7 w-7 text-white/80" />}
-          <span className="hidden max-w-28 truncate text-xs font-medium sm:block">{user?.displayName || user?.email?.split("@")[0] || "Guest"}</span>
+        <button onClick={() => setMenuOpen((open) => !open)} title="Account" aria-label="Account menu" aria-expanded={menuOpen} className={`flex h-10 w-full items-center gap-3 rounded-xl px-3 text-sm text-muted-foreground transition-colors hover:bg-secondary/80 hover:text-foreground active:scale-[.98] ${expanded ? "" : "justify-center px-0"}`}>
+          {user?.photoURL ? <img src={user.photoURL} alt="" className="h-[22px] w-[22px] shrink-0 rounded-full object-cover" /> : <CircleUserRound className="h-[21px] w-[21px] shrink-0" />}
+          {expanded && <span className="min-w-0 flex-1 truncate text-left">{user?.displayName || user?.email?.split("@")[0] || "Guest"}</span>}
         </button>
       </div>
 
