@@ -14,6 +14,7 @@ import {
 import { get, ref, serverTimestamp, set, update } from "firebase/database";
 import { ChevronRight, CircleUserRound, LogOut, UserRound, X, BookOpen, Loader2 } from "lucide-react";
 import { bookstoreAuth, bookstoreDatabase } from "@/lib/bookstore-firebase";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 type AuthMode = "login" | "register";
 
@@ -22,6 +23,7 @@ export function ShivaAccount({ expanded = false }: { expanded?: boolean }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -178,7 +180,7 @@ export function ShivaAccount({ expanded = false }: { expanded?: boolean }) {
               {user ? (
                 <>
                   <button onClick={() => { setProfileOpen(true); setMenuOpen(false); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"><UserRound className="h-[18px] w-[18px]" /> Profile</button>
-                  <button onClick={() => void runAuth(() => signOut(bookstoreAuth))} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-400 transition-colors hover:bg-secondary"><LogOut className="h-[18px] w-[18px]" /> Log out</button>
+                  <button onClick={() => { setMenuOpen(false); setLogoutConfirmOpen(true); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-400 transition-colors hover:bg-secondary"><LogOut className="h-[18px] w-[18px]" /> Log out</button>
                 </>
               ) : (
                 <>
@@ -195,6 +197,26 @@ export function ShivaAccount({ expanded = false }: { expanded?: boolean }) {
           {expanded && <span className="min-w-0 flex-1 truncate text-left">{user?.displayName || user?.email?.split("@")[0] || "Guest"}</span>}
         </button>
       </div>
+
+
+      <AlertDialog open={logoutConfirmOpen} onOpenChange={setLogoutConfirmOpen}>
+        <AlertDialogContent className="w-[calc(100%-32px)] max-w-[400px] rounded-2xl border-white/10 bg-[#202123] text-white shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-lg font-semibold">Log out of Shiva AI?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm leading-relaxed text-white/60">
+              Are you sure you want to log out? You can log back in anytime with your BOOKStore account.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-2 gap-2 sm:gap-2">
+            <AlertDialogCancel className="mt-0 rounded-xl border-white/15 bg-transparent text-white hover:bg-white/10 hover:text-white">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => void runAuth(() => signOut(bookstoreAuth))} className="rounded-xl bg-white px-4 text-[#202123] hover:bg-white/90">
+              Log out
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {(authOpen || profileOpen) && typeof document !== "undefined" && createPortal(
         <div
