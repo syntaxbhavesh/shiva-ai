@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { ChevronDown, FileText, Loader2, Plus, SendHorizontal, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import ReactMarkdown from "react-markdown";
 import { ShivaSidebar } from "@/components/ShivaSidebar";
 import { ensureThread, persistThread } from "@/lib/chat-store";
@@ -88,7 +88,7 @@ function ChatPage() {
     }
   }
 
-  function submit(e: React.FormEvent) {
+  function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const text = input.trim();
     if (!text || isBusy) return;
