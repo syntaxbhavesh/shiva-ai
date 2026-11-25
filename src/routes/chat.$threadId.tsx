@@ -80,7 +80,7 @@ function ChatPage() {
 
 
   useEffect(() => {
-    if (messages.length > 0) persistThread(threadId, messages);
+    if (messages.length > 0 && status !== "streaming") persistThread(threadId, messages);
   }, [messages, status, threadId]);
 
   // Ask the configured AI provider to title the whole conversation after each
