@@ -68,7 +68,7 @@ function ChatPage() {
         await syncCloudThreads();
         if (bookstoreAuth.currentUser?.uid === user.uid) {
           const saved = getThread(threadId);
-          if (saved?.messages?.length) setMessages(saved.messages);
+          setMessages(saved?.messages ?? []);
         }
       } catch (syncError) {
         console.error("Could not restore Shiva AI chats:", syncError);
