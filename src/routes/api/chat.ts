@@ -34,9 +34,32 @@ export const Route = createFileRoute("/api/chat")({
             return Response.json({ error: "Messages are required." }, { status: 400 });
           }
 
-          const messages = body.messages as UIMessage[];
+          // Older/local chat records can contain malformed parts (null or missing
+          // "type"). The AI SDK inspects part.type internally, so normalize the
+          // incoming UI messages before reading or converting them.
+          const messages = (body.messages as unknown[])
+            .filter((value): value is Record<string, unknown> =>
+              !!value && typeof value === "object" &&
+              ["user", "assistant", "system"].includes(String((value as Record<string, unknown>).role)),
+            )
+            .map((message) => ({
+              ...message,
+              id: typeof message.id === "string" ? message.id : crypto.randomUUID(),
+              parts: Array.isArray(message.parts)
+                ? message.parts.filter((part): part is Record<string, unknown> =>
+                    !!part && typeof part === "object" &&
+                    typeof (part as Record<string, unknown>).type === "string",
+                  )
+                : [],
+            })) as UIMessage[];
+          if (!messages.length || !messages.some((message) => message.role === "user")) {
+            return Response.json({ error: "A valid user message is required." }, { status: 400 });
+          }
           const notes = Array.isArray(body.noteContext) ? body.noteContext.slice(0, 10) : [];
-          const latestUserText = [...(body.messages as UIMessage[])].reverse().find((message) => message.role === "user")?.parts?.filter((part) => part.type === "text").map((part) => part.text).join(" ") || "";
+          const latestUserText = [...messages].reverse().find((message) => message.role === "user")?.parts
+            ?.filter((part) => part.type === "text")
+            .map((part) => part.type === "text" ? part.text : "")
+            .join(" ") || "";
           let knowledgeBlock = "";
           try {
             const snapshot = await getShivaChatDatabase().ref("knowledgeBase/items").get();
@@ -66,7 +89,7 @@ export const Route = createFileRoute("/api/chat")({
           const safeMessages = messages.map((message) => ({
             ...message,
             parts: (message.parts || [])
-              .filter((part) => part.type !== "reasoning")
+              .filter((part) => typeof part?.type === "string" && part.type !== "reasoning")
               .map((part) => {
                 if (part.type !== "file") return part;
                 const filePart = part as typeof part & { mediaType?: string; url?: string; filename?: string };
