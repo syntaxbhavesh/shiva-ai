@@ -65,11 +65,28 @@ export const Route = createFileRoute("/api/chat")({
           // Never replay hidden reasoning parts from earlier assistant turns to providers.
           const safeMessages = messages.map((message) => ({
             ...message,
-            parts: (message.parts || []).filter((part) => part.type !== "reasoning"),
+            parts: (message.parts || [])
+              .filter((part) => part.type !== "reasoning")
+              .map((part) => {
+                if (part.type !== "file") return part;
+                const filePart = part as typeof part & { mediaType?: string; url?: string; filename?: string };
+                const dataMime = typeof filePart.url === "string"
+                  ? filePart.url.match(/^data:([^;,]+)/)?.[1]
+                  : undefined;
+                const extension = filePart.filename?.split(".").pop()?.toLowerCase();
+                const extensionMime: Record<string, string> = {
+                  png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg",
+                  webp: "image/webp", gif: "image/gif", pdf: "application/pdf",
+                };
+                return {
+                  ...filePart,
+                  mediaType: filePart.mediaType || dataMime || (extension ? extensionMime[extension] : undefined) || "application/octet-stream",
+                };
+              }),
           }));
           const modelMessages = await convertToModelMessages(safeMessages);
           const hasImage = messages.some((message) =>
-            message.parts?.some((part) => part.type === "file" && part.mediaType?.startsWith("image/")),
+            message.parts?.some((part) => part.type === "file" && (part.mediaType || (typeof part.url === "string" ? part.url.match(/^data:([^;,]+)/)?.[1] : "") || "").startsWith("image/")),
           );
           const configuredProviders = getShivaProviders();
           const providers = hasImage
