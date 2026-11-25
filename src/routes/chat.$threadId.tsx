@@ -57,6 +57,8 @@ function ChatPage() {
   const [input, setInput] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [voiceLanguage, setVoiceLanguage] = useState(() => typeof navigator !== "undefined" && navigator.language ? navigator.language : "en-IN");
+  const voiceStopRequestedRef = useRef(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const voiceBaseTextRef = useRef("");
   const [quizMode, setQuizMode] = useState(false);
@@ -215,12 +217,13 @@ function ChatPage() {
     }
     try {
       const recognition = new SpeechRecognitionCtor();
-      recognition.lang = "hi-IN";
+      recognition.lang = voiceLanguage;
       recognition.continuous = true;
       recognition.interimResults = true;
       voiceBaseTextRef.current = input.trim()
         ? `${input.trim()} `
         : "";
+      voiceStopRequestedRef.current = false;
       recognition.onresult = (event) => {
         let transcript = "";
         for (let i = 0; i < event.results.length; i += 1) {
@@ -243,8 +246,8 @@ function ChatPage() {
         }
       };
       recognition.onend = () => {
-        setIsListening(false);
         recognitionRef.current = null;
+        if (!voiceStopRequestedRef.current) setIsListening(false);
       };
       recognitionRef.current = recognition;
       recognition.start();
@@ -257,11 +260,12 @@ function ChatPage() {
   }
 
   function stopVoiceInput() {
+    voiceStopRequestedRef.current = true;
     recognitionRef.current?.stop();
-    setIsListening(false);
   }
 
   function cancelVoiceInput() {
+    voiceStopRequestedRef.current = true;
     recognitionRef.current?.abort();
     recognitionRef.current = null;
     setIsListening(false);
@@ -276,7 +280,12 @@ function ChatPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (isListening) stopVoiceInput();
+    if (isListening) {
+      voiceStopRequestedRef.current = true;
+      recognitionRef.current?.abort();
+      recognitionRef.current = null;
+      setIsListening(false);
+    }
     const text = input.trim();
     if ((!text && pendingImages.length === 0) || isBusy) return;
     setInput("");
@@ -509,68 +518,55 @@ function ChatPage() {
               className="hidden"
               onChange={(e) => void handleFiles(e.target.files)}
             />
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              title="Upload PDF, DOCX, text or images"
-              aria-label="Upload PDF, DOCX, text or images"
-              className="mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-            >
-              {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
-            </button>
-            <textarea
-              ref={inputRef}
-              id="chat-message"
-              name="message"
-              rows={1}
-              value={input}
-              onChange={(e) => {
-                setInput(e.target.value);
-                e.currentTarget.style.height = "auto";
-                e.currentTarget.style.height = `${Math.min(e.currentTarget.scrollHeight, 144)}px`;
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  e.currentTarget.form?.requestSubmit();
-                }
-              }}
-              placeholder={notes.length > 0 ? "Ask about your notes..." : "Ask Shiva anything..."}
-              className="max-h-36 min-h-9 min-w-0 flex-1 resize-none self-center bg-transparent py-2 text-[15px] leading-5 text-foreground outline-none placeholder:text-muted-foreground"
-            />
-            <span className="mb-1 hidden shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11px] text-muted-foreground sm:inline-flex">
-              Rudra <ChevronDown className="h-3.5 w-3.5" />
-            </span>
             {isListening ? (
-              <div className="mb-0.5 flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full bg-secondary/70 px-2 sm:px-3" aria-live="polite">
-                <button type="button" onClick={cancelVoiceInput} aria-label="Cancel voice input" title="Cancel" className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground">
-                  <X className="h-5 w-5" />
+              <div className="flex min-h-12 w-full min-w-0 items-center gap-2 rounded-full bg-secondary/75 px-2 sm:gap-3 sm:px-3" aria-live="polite">
+                <button type="button" onClick={cancelVoiceInput} aria-label="Cancel voice input" title="Cancel recording" className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-background hover:text-foreground">
+                  <X className="h-6 w-6" />
                 </button>
-                <div className="flex min-w-0 flex-1 items-center justify-center gap-[3px]" aria-label="Listening">
-                  {Array.from({ length: 24 }, (_, i) => (
-                    <span key={i} className="w-[3px] rounded-full bg-primary/80 animate-pulse" style={{ height: `${8 + ((i * 13) % 25)}px`, animationDelay: `${(i % 7) * 90}ms`, animationDuration: `${500 + (i % 4) * 140}ms` }} />
+                <div className="flex h-10 min-w-0 flex-1 items-center justify-center gap-[3px] overflow-hidden" aria-label="Listening waveform">
+                  {Array.from({ length: 36 }, (_, i) => (
+                    <span key={i} className="w-[3px] shrink-0 rounded-full bg-muted-foreground/75 animate-pulse" style={{ height: `${5 + ((i * 17 + 11) % 29)}px`, animationDelay: `${(i % 9) * 75}ms`, animationDuration: `${420 + (i % 5) * 130}ms` }} />
                   ))}
                 </div>
-                <button type="button" onClick={stopVoiceInput} aria-label="Stop recording" title="Stop recording" className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-background text-foreground shadow-sm hover:bg-background/80">
+                <button type="button" onClick={stopVoiceInput} aria-label="Stop recording" title="Stop recording" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-background text-foreground shadow-sm transition-colors hover:bg-background/80">
                   <Square className="h-4 w-4 fill-current" />
                 </button>
-                <button type="submit" disabled={isBusy || !input.trim()} aria-label="Transcribe and send" title="Transcribe and send" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-95 disabled:bg-muted disabled:text-muted-foreground">
-                  <SendHorizontal className="h-[18px] w-[18px]" />
+                <button type="submit" disabled={isBusy || !input.trim()} aria-label="Send transcribed message" title="Send transcribed message" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-95 disabled:bg-muted disabled:text-muted-foreground">
+                  <SendHorizontal className="h-5 w-5" />
                 </button>
               </div>
             ) : (
-              <button
-                type={input.trim() || pendingImages.length > 0 ? "submit" : "button"}
-                onClick={input.trim() || pendingImages.length > 0 ? undefined : startVoiceInput}
-                disabled={isBusy}
-                aria-label={input.trim() || pendingImages.length > 0 ? (editingMessageIndex !== null ? "Replace message and regenerate" : "Send message") : "Start voice input"}
-                title={input.trim() || pendingImages.length > 0 ? "Send message" : "Voice input"}
-                className="mb-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-95 disabled:bg-secondary disabled:text-muted-foreground disabled:shadow-none"
-              >
-                {input.trim() || pendingImages.length > 0
-                  ? <SendHorizontal className="h-[18px] w-[18px]" />
-                  : <Mic className="h-[18px] w-[18px]" />}
-              </button>
+              <>
+                <input ref={fileRef} id="chat-file-upload" name="chat-file-upload" type="file" accept=".pdf,.docx,.txt,.md,image/png,image/jpeg,image/webp,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple className="hidden" onChange={(e) => void handleFiles(e.target.files)} />
+                <button type="button" onClick={() => fileRef.current?.click()} title="Upload PDF, DOCX, text or images" aria-label="Upload PDF, DOCX, text or images" className="mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
+                  {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
+                </button>
+                <textarea ref={inputRef} id="chat-message" name="message" rows={1} value={input}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    e.currentTarget.style.height = "auto";
+                    e.currentTarget.style.height = `${Math.min(e.currentTarget.scrollHeight, 144)}px`;
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      e.currentTarget.form?.requestSubmit();
+                    }
+                  }}
+                  placeholder={notes.length > 0 ? "Ask about your notes..." : "Ask Shiva anything..."}
+                  className="max-h-36 min-h-9 min-w-0 flex-1 resize-none self-center bg-transparent py-2 text-[15px] leading-5 text-foreground outline-none placeholder:text-muted-foreground"
+                />
+                <select aria-label="Voice recognition language" value={voiceLanguage} onChange={(e) => setVoiceLanguage(e.target.value)} title="Voice language" className="mb-1 hidden max-w-[92px] shrink-0 bg-transparent text-[10px] text-muted-foreground outline-none sm:block">
+                  <option value="en-IN">English (India)</option><option value="hi-IN">Hindi</option><option value="en-US">English (US)</option><option value="bn-IN">Bengali</option><option value="ta-IN">Tamil</option><option value="te-IN">Telugu</option><option value="mr-IN">Marathi</option><option value="ur-PK">Urdu</option>
+                </select>
+                <span className="mb-1 hidden shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11px] text-muted-foreground sm:inline-flex">Rudra <ChevronDown className="h-3.5 w-3.5" /></span>
+                <button type={input.trim() || pendingImages.length > 0 ? "submit" : "button"} onClick={input.trim() || pendingImages.length > 0 ? undefined : startVoiceInput} disabled={isBusy}
+                  aria-label={input.trim() || pendingImages.length > 0 ? (editingMessageIndex !== null ? "Replace message and regenerate" : "Send message") : "Start voice input"}
+                  title={input.trim() || pendingImages.length > 0 ? "Send message" : "Start voice input"}
+                  className="mb-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-95 disabled:bg-secondary disabled:text-muted-foreground disabled:shadow-none">
+                  {input.trim() || pendingImages.length > 0 ? <SendHorizontal className="h-[18px] w-[18px]" /> : <Mic className="h-[18px] w-[18px]" />}
+                </button>
+              </>
             )}
           </form>
           <p className="mt-2 text-center text-[10px] text-muted-foreground/75">Shiva AI can make mistakes. Check important information.</p>
