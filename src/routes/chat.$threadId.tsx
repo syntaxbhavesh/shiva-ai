@@ -40,6 +40,8 @@ function ChatPage() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const shouldAutoScrollRef = useRef(true);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const lastTitleMessageCount = useRef(0);
   const [notes, setNotes] = useState<NoteDoc[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -99,7 +101,9 @@ function ChatPage() {
   }, [messages, status, threadId]);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (shouldAutoScrollRef.current) {
+      endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
   }, [messages, status]);
 
   useEffect(() => {
@@ -133,6 +137,8 @@ function ChatPage() {
     const text = input.trim();
     if (!text || isBusy) return;
     setInput("");
+    shouldAutoScrollRef.current = true;
+    setShowScrollToBottom(false);
     const noteContext = retrieveContext(text);
     void sendMessage({ text }, { body: { noteContext } });
   }
@@ -184,7 +190,16 @@ function ChatPage() {
               <h1 className="text-lg font-semibold tracking-tight">Shiva AI</h1>
               <button type="button" onClick={() => setQuizMode(true)} className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:border-primary/40 hover:text-foreground"><CircleHelp className="h-3.5 w-3.5" /> Create quiz</button>
             </div>
-            <section className="mt-4 flex w-full max-w-2xl flex-1 flex-col gap-4 overflow-y-auto pb-4">
+            <section
+              onScroll={(event) => {
+                const element = event.currentTarget;
+                const distanceFromBottom = element.scrollHeight - element.scrollTop - element.clientHeight;
+                const nearBottom = distanceFromBottom < 120;
+                shouldAutoScrollRef.current = nearBottom;
+                setShowScrollToBottom(!nearBottom && element.scrollHeight > element.clientHeight + 80);
+              }}
+              className="mt-4 flex w-full max-w-2xl flex-1 flex-col gap-4 overflow-y-auto pb-4"
+            >
               {messages.map((m) => {
                 const text = m.parts
                   .map((p) => (p.type === "text" ? p.text : ""))
@@ -216,6 +231,22 @@ function ChatPage() {
               <div ref={endRef} />
             </section>
           </>
+        )}
+
+        {showScrollToBottom && !empty && !quizMode && (
+          <button
+            type="button"
+            onClick={() => {
+              shouldAutoScrollRef.current = true;
+              setShowScrollToBottom(false);
+              endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+            }}
+            aria-label="Scroll to latest message"
+            title="Scroll to latest message"
+            className="fixed bottom-36 left-1/2 z-30 grid h-10 w-10 -translate-x-1/2 place-items-center rounded-full border border-border/80 bg-card/95 text-foreground shadow-lg backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:bg-secondary active:scale-95"
+          >
+            <ChevronDown className="h-5 w-5" />
+          </button>
         )}
 
         <div className={empty ? "w-full max-w-2xl pb-10" : "w-full max-w-2xl pb-6"}>
