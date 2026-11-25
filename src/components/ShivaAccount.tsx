@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
@@ -195,35 +196,41 @@ export function ShivaAccount({ expanded = false }: { expanded?: boolean }) {
         </button>
       </div>
 
-      {(authOpen || profileOpen) && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-3 backdrop-blur-[2px] transition-colors" onMouseDown={(event) => { if (event.target === event.currentTarget) { setAuthOpen(false); setProfileOpen(false); } }}>
-          <section className="relative max-h-[92svh] w-full max-w-[440px] overflow-y-auto rounded-[28px] border border-white/15 bg-[#202124]/95 p-6 text-white shadow-[0_24px_90px_rgba(0,0,0,.65)] backdrop-blur-2xl sm:p-8">
-            <button aria-label="Close" onClick={() => { setAuthOpen(false); setProfileOpen(false); }} className="absolute right-5 top-5 rounded-full p-2 text-white/65 transition hover:bg-white/10 hover:text-white"><X className="h-5 w-5" /></button>
-            <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl border border-white/10 bg-white/[.08] text-[#a99bff]"><BookOpen className="h-8 w-8" /></div>
+      {(authOpen || profileOpen) && typeof document !== "undefined" && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-black/65 p-4 backdrop-blur-md animate-[fade-in_.18s_ease-out]"
+          onMouseDown={(event) => { if (event.target === event.currentTarget) { setAuthOpen(false); setProfileOpen(false); } }}
+        >
+          <section role="dialog" aria-modal="true" aria-labelledby="account-dialog-title" className="relative my-auto w-full max-w-[420px] overflow-hidden rounded-3xl border border-white/10 bg-[#202123] p-6 text-white shadow-[0_28px_100px_rgba(0,0,0,.7)] sm:p-8">
+            <button aria-label="Close" onClick={() => { setAuthOpen(false); setProfileOpen(false); }} className="absolute right-4 top-4 rounded-full p-2 text-white/55 transition hover:bg-white/10 hover:text-white"><X className="h-5 w-5" /></button>
+            <div className="mb-7 flex flex-col items-center text-center">
+              <div className="mb-4 grid h-12 w-12 place-items-center rounded-2xl border border-white/10 bg-white/[.06] text-white"><BookOpen className="h-6 w-6" /></div>
+              <h2 id="account-dialog-title" className="text-2xl font-semibold tracking-tight">{profileOpen ? "Your account" : mode === "login" ? "Welcome back" : "Create your account"}</h2>
+              <p className="mt-2 text-sm text-white/55">{profileOpen ? "Your BOOKStore account is connected to Shiva AI." : mode === "login" ? "Log in to continue to Shiva AI." : "Sign up to get started with Shiva AI."}</p>
+            </div>
             {profileOpen && user ? (
-              <div className="pt-2 text-center">
-                <h2 className="text-2xl font-semibold text-white">BOOKStore Profile</h2>
-                <div className="my-5 flex flex-col items-center gap-2">{user.photoURL ? <img src={user.photoURL} alt="" className="h-16 w-16 rounded-full" /> : <CircleUserRound className="h-16 w-16 text-white/45" />}<p className="font-semibold text-white">{user.displayName || "BOOKStore User"}</p><p className="text-sm text-white/55">{user.email}</p></div>
-                <p className="mb-5 text-xs text-white/55">Your Shiva AI sign-in uses the same Firebase Authentication account as BOOKStore.</p>
-                <a href="https://bookstore-nt.vercel.app" target="_blank" rel="noreferrer" className="block rounded-xl bg-[#6251dc] px-4 py-3 font-semibold text-white transition hover:bg-[#7162e8]">Open BOOKStore</a>
+              <div className="text-center">
+                <div className="mb-5 flex flex-col items-center gap-2">{user.photoURL ? <img src={user.photoURL} alt="" className="h-16 w-16 rounded-full object-cover" /> : <CircleUserRound className="h-16 w-16 text-white/45" />}<p className="font-semibold">{user.displayName || "BOOKStore User"}</p><p className="text-sm text-white/55">{user.email}</p></div>
+                <a href="https://bookstore-nt.vercel.app" target="_blank" rel="noreferrer" className="block rounded-xl bg-white px-4 py-3 text-sm font-semibold text-[#202123] transition hover:bg-white/90">Open BOOKStore</a>
               </div>
             ) : (
               <>
-                <h2 className="mb-6 text-center text-2xl font-semibold text-white">Please Enter your Details</h2>
-                <form onSubmit={submitEmail} className="space-y-3">
-                  {mode === "register" && <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Full name" autoComplete="name" className="w-full rounded-xl border border-white/10 bg-[#111214] px-4 py-4 text-white placeholder:text-white/40 outline-none transition focus:border-[#8172ff] focus:ring-2 focus:ring-[#8172ff]/20" />}
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email Address" autoComplete="email" required className="w-full rounded-xl border border-white/10 bg-[#111214] px-4 py-4 text-white placeholder:text-white/40 outline-none transition focus:border-[#8172ff] focus:ring-2 focus:ring-[#8172ff]/20" />
-                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={6} required className="w-full rounded-xl border border-gray-200 bg-white px-4 py-4 outline-none focus:border-[#6251dc]" />
-                  {error && <p role="alert" className="rounded-lg border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}
-                  <button disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#6251dc] to-[#5141c9] px-4 py-4 font-semibold text-white disabled:opacity-60">{busy && <Loader2 className="h-4 w-4 animate-spin" />}{mode === "login" ? "Login" : "Create Account"}</button>
+                <form onSubmit={submitEmail} className="space-y-4">
+                  {mode === "register" && <label className="block space-y-2 text-sm font-medium text-white/80">Full name<input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your name" autoComplete="name" className="w-full rounded-xl border border-white/15 bg-[#2f3033] px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-white/40 focus:ring-2 focus:ring-white/10" /></label>}
+                  <label className="block space-y-2 text-sm font-medium text-white/80">Email address<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" autoComplete="email" required className="w-full rounded-xl border border-white/15 bg-[#2f3033] px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-white/40 focus:ring-2 focus:ring-white/10" /></label>
+                  <label className="block space-y-2 text-sm font-medium text-white/80">Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={6} required className="w-full rounded-xl border border-white/15 bg-[#2f3033] px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-white/40 focus:ring-2 focus:ring-white/10" /></label>
+                  {error && <p role="alert" className="rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}
+                  <button disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-[#202123] transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60">{busy && <Loader2 className="h-4 w-4 animate-spin" />}{mode === "login" ? "Continue" : "Create account"}</button>
                 </form>
-                <button disabled={busy} onClick={() => void runAuth(() => signInWithPopup(bookstoreAuth, new GoogleAuthProvider()))} className="mt-3 flex w-full items-center justify-center gap-3 rounded-xl border border-white/15 bg-white/[.04] px-4 py-3.5 font-medium text-white transition hover:bg-white/[.09] disabled:opacity-60"><span className="text-lg font-bold text-[#4285F4]">G</span> Continue with Google</button>
-                <p className="mt-5 text-sm text-white/65">{mode === "login" ? "New User?" : "Already have an account?"} <button onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }} className="font-semibold text-[#a99bff] hover:text-white">{mode === "login" ? "Create Account" : "Login"}</button></p>
-                <p className="mt-5 text-center text-xs leading-relaxed text-white/45">By continuing, you agree to BOOKStore's account terms and privacy policy.</p>
+                <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-wider text-white/35"><span className="h-px flex-1 bg-white/10" />or<span className="h-px flex-1 bg-white/10" /></div>
+                <button disabled={busy} onClick={() => void runAuth(() => signInWithPopup(bookstoreAuth, new GoogleAuthProvider()))} className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/15 bg-transparent px-4 py-3 text-sm font-medium text-white transition hover:bg-white/[.06] disabled:opacity-60"><span className="grid h-5 w-5 place-items-center rounded-full bg-white text-sm font-bold text-[#4285F4]">G</span>Continue with Google</button>
+                <p className="mt-6 text-center text-sm text-white/55">{mode === "login" ? "Don't have an account?" : "Already have an account?"} <button onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }} className="font-semibold text-white underline-offset-4 hover:underline">{mode === "login" ? "Sign up" : "Log in"}</button></p>
+                <p className="mt-5 text-center text-[11px] leading-relaxed text-white/35">By continuing, you agree to BOOKStore's account terms and privacy policy.</p>
               </>
             )}
           </section>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
