@@ -25,7 +25,7 @@ function parseServiceAccount(raw: string | undefined, name: string): ServiceAcco
   }
   const account = parsed as ServiceAccount & { type?: string };
   if (
-    (account.type && account.type !== "service_account") ||
+    account.type !== "service_account" ||
     !account.project_id ||
     !account.client_email ||
     !account.private_key
