@@ -12,7 +12,7 @@ export const issueShivaChatToken = onRequest({ region: "asia-south1", cors: ["ht
     const header = req.get("authorization") ?? "";
     const token = header.startsWith("Bearer ") ? header.slice(7) : "";
     if (!token) { res.status(401).json({ error: "BOOKStore sign-in required." }); return; }
-    const decoded = await getAuth(bookstoreApp).verifyIdToken(token, true);
+    const decoded = await getAuth(bookstoreApp).verifyIdToken(token);
     if (decoded.aud !== "bookstore-6ab08" || decoded.iss !== "https://securetoken.google.com/bookstore-6ab08" || !decoded.uid) {
       res.status(401).json({ error: "Invalid BOOKStore identity." }); return;
     }
