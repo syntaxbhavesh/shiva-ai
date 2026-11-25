@@ -45,7 +45,6 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
 
   return (
     <>
-      <ShivaAccount />
       <aside
         className={`fixed left-0 top-0 z-40 flex h-full flex-col border-r border-border/50 bg-sidebar/90 pt-3 shadow-xl shadow-black/5 backdrop-blur-xl transition-[width] duration-300 ease-out ${expanded ? "w-64" : "w-14"}`}
       >
@@ -132,6 +131,10 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
             </button>
           </div>
         )}
+
+        <div className="mt-auto border-t border-border/70 px-2 py-3">
+          <ShivaAccount expanded={expanded} />
+        </div>
       </aside>
 
       {panel && (
