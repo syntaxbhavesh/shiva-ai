@@ -57,7 +57,6 @@ function ChatPage() {
   const [input, setInput] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
-  const [voiceLanguage, setVoiceLanguage] = useState("en-IN");
   const voiceStopRequestedRef = useRef(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const voiceBaseTextRef = useRef("");
@@ -217,7 +216,7 @@ function ChatPage() {
     }
     try {
       const recognition = new SpeechRecognitionCtor();
-      recognition.lang = voiceLanguage;
+      // Use the device/browser locale automatically. Browser speech recognition\n      // does not provide dependable audio-level language detection for Hinglish.\n      recognition.lang = navigator.languages?.[0] || navigator.language || "en-IN";
       recognition.continuous = true;
       recognition.interimResults = true;
       voiceBaseTextRef.current = input.trim()
@@ -555,9 +554,6 @@ function ChatPage() {
                   placeholder={notes.length > 0 ? "Ask about your notes..." : "Ask Shiva anything..."}
                   className="max-h-36 min-h-9 min-w-0 flex-1 resize-none self-center bg-transparent py-2 text-[15px] leading-5 text-foreground outline-none placeholder:text-muted-foreground"
                 />
-                <select aria-label="Voice recognition language" value={voiceLanguage} onChange={(e) => setVoiceLanguage(e.target.value)} title="Voice language" className="mb-1 max-w-[66px] shrink-0 bg-transparent text-[9px] text-muted-foreground outline-none sm:max-w-[92px] sm:text-[10px]">
-                  <option value="en-IN">English (India)</option><option value="hi-IN">Hindi</option><option value="en-US">English (US)</option><option value="bn-IN">Bengali</option><option value="ta-IN">Tamil</option><option value="te-IN">Telugu</option><option value="mr-IN">Marathi</option><option value="ur-PK">Urdu</option>
-                </select>
                 <span className="mb-1 hidden shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11px] text-muted-foreground sm:inline-flex">Rudra <ChevronDown className="h-3.5 w-3.5" /></span>
                 <button type={input.trim() || pendingImages.length > 0 ? "submit" : "button"} onClick={input.trim() || pendingImages.length > 0 ? undefined : startVoiceInput} disabled={isBusy}
                   aria-label={input.trim() || pendingImages.length > 0 ? (editingMessageIndex !== null ? "Replace message and regenerate" : "Send message") : "Start voice input"}
