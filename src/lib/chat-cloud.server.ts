@@ -7,7 +7,7 @@ function parseServiceAccount(raw: string | undefined, name: string): ServiceAcco
   if (!raw) throw new Error(`${name}_NOT_CONFIGURED`);
   // Accept the normal downloaded JSON file, a JSON-string-wrapped value, or
   // an explicitly base64-encoded JSON value. Never log the credential itself.
-  const value = raw.trim().replace(/^\\uFEFF/, "");
+  const value = raw.trim().replace(/^\uFEFF/, "");
   let parsed: unknown;
   try {
     const source = value.startsWith("base64:")
