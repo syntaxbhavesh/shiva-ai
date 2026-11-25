@@ -34,10 +34,15 @@ export const Route = createFileRoute("/api/chat")({
           }
 
           const messages = body.messages as UIMessage[];
-          const notes = Array.isArray(body.noteContext) ? body.noteContext.slice(0, 6) : [];
+          const notes = Array.isArray(body.noteContext) ? body.noteContext.slice(0, 10) : [];
+          let remainingNoteChars = 90000;
           const notesBlock = notes.length
-            ? `\n\nSTUDENT NOTES:\n${notes.map((n, i) => `[${i + 1}] From "${n.name}":\n${n.text}`).join("\n\n")}`
-            : "\n\nSTUDENT NOTES: none relevant for this question.";
+            ? `\n\nUPLOADED STUDY MATERIAL (use these excerpts and cite their filenames):\n${notes.map((n, i) => {
+                const text = typeof n?.text === "string" ? n.text.slice(0, remainingNoteChars) : "";
+                remainingNoteChars -= text.length;
+                return text ? `[Document ${i + 1}: "${String(n.name || "Uploaded file").slice(0, 160)}"]\n${text}` : "";
+              }).filter(Boolean).join("\n\n")}`
+            : "\n\nUPLOADED STUDY MATERIAL: none supplied for this question.";
 
           // Never replay hidden reasoning parts from earlier assistant turns to providers.
           const safeMessages = messages.map((message) => ({
