@@ -287,7 +287,7 @@ function ChatPage() {
                 const text = m.parts
                   .map((p) => (p.type === "text" ? p.text : ""))
                   .join("");
-                const imageParts = m.parts.filter((part) => part.type === "file" && ((part as { mediaType?: string }).mediaType || "").startsWith("image/")) as Array<{ url?: string; mediaType?: string; filename?: string }>;
+                const imageParts = m.parts.filter((part) => { if (part.type !== "file") return false; const file = part as { mediaType?: string; url?: string }; const mime = file.mediaType || file.url?.match(/^data:([^;,]+)/)?.[1] || ""; return mime.startsWith("image/"); }) as Array<{ url?: string; mediaType?: string; filename?: string }>;
                 return m.role === "user" ? (
                   <div key={m.id} className="ml-auto max-w-[88%] sm:max-w-[82%]">
                     {imageParts.length > 0 && (
