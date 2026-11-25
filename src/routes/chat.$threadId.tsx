@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { FileText, Loader2, Plus, SendHorizontal, Sparkles, BookOpen, Lightbulb, Atom, X, ChevronDown, CircleHelp, Copy, Pencil, Check } from "lucide-react";
+import { FileText, Loader2, Plus, SendHorizontal, Sparkles, BookOpen, Lightbulb, Atom, X, ChevronDown, CircleHelp, Copy, Pencil, Check, Maximize2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { ShivaSidebar } from "@/components/ShivaSidebar";
@@ -49,6 +49,8 @@ function ChatPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [pendingImages, setPendingImages] = useState<File[]>([]);
+  const [pendingImagePreviews, setPendingImagePreviews] = useState<string[]>([]);
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const [documentContext, setDocumentContext] = useState<{ name: string; text: string }[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
@@ -64,6 +66,12 @@ function ChatPage() {
   useEffect(() => {
     setNotes(loadNotes());
   }, []);
+
+  useEffect(() => {
+    const urls = pendingImages.map((file) => URL.createObjectURL(file));
+    setPendingImagePreviews(urls);
+    return () => urls.forEach((url) => URL.revokeObjectURL(url));
+  }, [pendingImages]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(bookstoreAuth, async (user) => {
@@ -279,9 +287,20 @@ function ChatPage() {
                 const text = m.parts
                   .map((p) => (p.type === "text" ? p.text : ""))
                   .join("");
+                const imageParts = m.parts.filter((part) => part.type === "file" && ((part as { mediaType?: string }).mediaType || "").startsWith("image/")) as Array<{ url?: string; mediaType?: string; filename?: string }>;
                 return m.role === "user" ? (
                   <div key={m.id} className="ml-auto max-w-[88%] sm:max-w-[82%]">
-                    <div className="whitespace-pre-wrap rounded-[1.35rem] rounded-br-md border border-primary/20 bg-primary px-4 py-3 text-[14px] leading-relaxed text-primary-foreground shadow-sm">{text}</div>
+                    {imageParts.length > 0 && (
+                      <div className="mb-2 flex max-w-full flex-wrap justify-end gap-2">
+                        {imageParts.map((part, index) => part.url ? (
+                          <button key={index} type="button" onClick={() => setFullscreenImage(part.url!)} className="group relative overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
+                            <img src={part.url} alt={part.filename || "Uploaded image"} className="max-h-56 max-w-[min(70vw,280px)] rounded-2xl object-cover" />
+                            <span className="absolute bottom-2 right-2 rounded-full bg-black/60 p-1.5 text-white opacity-0 transition group-hover:opacity-100"><Maximize2 className="h-4 w-4" /></span>
+                          </button>
+                        ) : null)}
+                      </div>
+                    )}
+                    {text && <div className="whitespace-pre-wrap rounded-[1.35rem] rounded-br-md border border-primary/20 bg-primary px-4 py-3 text-[14px] leading-relaxed text-primary-foreground shadow-sm">{text}</div>}
                     <div className="mt-1 flex justify-end gap-1">
                       <button type="button" onClick={() => { setEditingMessageIndex(messageIndex); setInput(text); inputRef.current?.focus(); }} title="Edit message" aria-label="Edit message" className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"><Pencil className="h-3.5 w-3.5" /></button>
                       <button type="button" onClick={() => void copyMessage(m.id, text)} title="Copy message" aria-label="Copy message" className="inline-flex items-center gap-1 rounded-lg p-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground">{copiedId === m.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}{copiedId === m.id ? "Copied" : ""}</button>
@@ -351,7 +370,16 @@ function ChatPage() {
                 </span>
               ))}
               {documentContext.map((doc, index) => <span key={doc.name + index} className="rounded-full bg-primary/10 px-3 py-1.5 text-xs text-primary">{doc.name} · ready</span>)}
-              {pendingImages.map((file, index) => <span key={file.name + index} className="rounded-full bg-primary/10 px-3 py-1.5 text-xs text-primary">{file.name} · image</span>)}
+              {pendingImages.length > 0 && (
+                <div className="flex w-full flex-wrap justify-center gap-2">
+                  {pendingImages.map((file, index) => (
+                    <div key={file.name + index} className="group relative h-20 w-20 overflow-hidden rounded-xl border border-border bg-secondary">
+                      {pendingImagePreviews[index] && <img src={pendingImagePreviews[index]} alt={file.name} className="h-full w-full object-cover" />}
+                      <button type="button" onClick={() => setPendingImages((current) => current.filter((_, i) => i !== index))} aria-label={`Remove ${file.name}`} className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100"><X className="h-3 w-3" /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
               {uploadError && <span className="text-xs text-destructive">{uploadError}</span>}
             </div>
           )}
@@ -413,7 +441,7 @@ function ChatPage() {
             </span>
             <button
               type="submit"
-              disabled={isBusy || !input.trim()}
+              disabled={isBusy || (!input.trim() && pendingImages.length === 0)}
               aria-label={editingMessageIndex !== null ? "Replace message and regenerate" : "Send message"}
               title={editingMessageIndex !== null ? "Replace message and regenerate" : "Send message"}
               className="mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-95 disabled:bg-secondary disabled:text-muted-foreground disabled:shadow-none"
@@ -428,6 +456,15 @@ function ChatPage() {
         </div>
 
       </main>
+
+      {fullscreenImage && (
+        <div role="dialog" aria-modal="true" aria-label="Image preview" onClick={() => setFullscreenImage(null)} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-3 backdrop-blur-sm sm:p-8">
+          <button type="button" onClick={() => setFullscreenImage(null)} aria-label="Close full-screen image" title="Close" className="absolute right-4 top-4 z-10 rounded-full bg-white/15 p-3 text-white transition hover:bg-white/25">
+            <X className="h-6 w-6" />
+          </button>
+          <img src={fullscreenImage} alt="Full-screen uploaded image" onClick={(event) => event.stopPropagation()} className="max-h-[90vh] max-w-full rounded-lg object-contain shadow-2xl" />
+        </div>
+      )}
     </div>
   );
 }
