@@ -145,7 +145,14 @@ function ChatPage() {
           imageFiles.push(file);
           continue;
         }
-        const text = await extractFileText(file);
+        let text = "";
+        if (file.name.toLowerCase().endsWith(".docx")) {
+          const mammoth = await import("mammoth");
+          const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+          text = result.value;
+        } else {
+          text = await extractFileText(file);
+        }
         if (!text.trim()) {
           setUploadError(`Couldn't extract readable text from "${file.name}". Scanned PDFs may need OCR.`);
           continue;
@@ -153,8 +160,14 @@ function ChatPage() {
         addNote(file.name, text);
         contexts.push({ name: file.name, text: text.slice(0, 120000) });
       }
+      const combinedImages = [...pendingImages, ...imageFiles];
+      const totalImageBytes = combinedImages.reduce((total, file) => total + file.size, 0);
+      if (combinedImages.length > 3 || totalImageBytes > 2_500_000) {
+        setUploadError("Please attach up to 3 images with a combined size under 2.5 MB.");
+      } else {
+        setPendingImages(combinedImages);
+      }
       setDocumentContext((current) => [...current, ...contexts]);
-      setPendingImages((current) => [...current, ...imageFiles]);
       setNotes(loadNotes());
     } catch (fileError) {
       console.error("File processing failed:", fileError);
@@ -339,7 +352,7 @@ function ChatPage() {
               id="chat-file-upload"
               name="chat-file-upload"
               type="file"
-              accept=".pdf,.txt,.md,image/*,text/plain,application/pdf"
+              accept=".pdf,.docx,.txt,.md,image/png,image/jpeg,image/webp,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               multiple
               className="hidden"
               onChange={(e) => void handleFiles(e.target.files)}
@@ -347,8 +360,8 @@ function ChatPage() {
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              title="Upload PDF, text or images"
-              aria-label="Upload PDF, text or images"
+              title="Upload PDF, DOCX, text or images"
+              aria-label="Upload PDF, DOCX, text or images"
               className="mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
