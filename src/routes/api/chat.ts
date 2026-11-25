@@ -48,7 +48,7 @@ export const Route = createFileRoute("/api/chat")({
           if (!useGroq && !lovableKey) {
             console.error("Shiva AI is not configured: GROQ_API_KEY and LOVABLE_API_KEY are missing.");
             return textError(
-              "Shiva AI is not configured on the server. Add GROQ_API_KEY in Vercel → Project Settings → Environment Variables, then redeploy.",
+              "Shiva AI is not configured on the server. Add GROQ_API_KEY or LOVABLE_API_KEY in Vercel → Project Settings → Environment Variables, then redeploy.",
               503,
             );
           }
