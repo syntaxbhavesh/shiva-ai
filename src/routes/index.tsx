@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { bookstoreAuth } from "@/lib/bookstore-firebase";
-import { loadThreads, newThreadId, syncCloudThreads } from "@/lib/chat-store";
+import { loadThreads, newThreadId } from "@/lib/chat-store";
 
 export const Route = createFileRoute("/")({
   ssr: false,
@@ -24,14 +24,7 @@ function Index() {
 
   useEffect(() => {
     let active = true;
-    const unsubscribe = onAuthStateChanged(bookstoreAuth, async (user) => {
-      if (user) {
-        try {
-          await syncCloudThreads();
-        } catch (error) {
-          console.error("Could not load saved Shiva AI chats:", error);
-        }
-      }
+    const unsubscribe = onAuthStateChanged(bookstoreAuth, (user) => {
       if (!active) return;
       const latest = loadThreads()[0];
       void navigate({
