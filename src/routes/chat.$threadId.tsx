@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { FileText, Loader2, Plus, SendHorizontal, Sparkles, BookOpen, Lightbulb, Atom, X, ChevronDown, CircleHelp } from "lucide-react";
+import { FileText, Loader2, Plus, SendHorizontal, Sparkles, BookOpen, Lightbulb, Atom, X, ChevronDown, CircleHelp, Copy, Pencil, Check } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { ShivaSidebar } from "@/components/ShivaSidebar";
@@ -48,6 +48,9 @@ function ChatPage() {
   const [notes, setNotes] = useState<NoteDoc[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [pendingImages, setPendingImages] = useState<File[]>([]);
+  const [documentContext, setDocumentContext] = useState<{ name: string; text: string }[]>([]);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const { messages, sendMessage, setMessages, status, error } = useChat({
     id: threadId,
@@ -131,36 +134,62 @@ function ChatPage() {
   }, [threadId, isBusy]);
 
   async function handleFiles(files: FileList | null) {
-    if (!files || files.length === 0) return;
+    if (!files?.length) return;
     setUploadError(null);
     setUploading(true);
     try {
+      const imageFiles: File[] = [];
+      const contexts: { name: string; text: string }[] = [];
       for (const file of Array.from(files)) {
+        if (file.type.startsWith("image/")) {
+          imageFiles.push(file);
+          continue;
+        }
         const text = await extractFileText(file);
         if (!text.trim()) {
-          setUploadError(`Couldn't read any text from "${file.name}".`);
+          setUploadError(`Couldn't extract readable text from "${file.name}". Scanned PDFs may need OCR.`);
           continue;
         }
         addNote(file.name, text);
+        contexts.push({ name: file.name, text: text.slice(0, 120000) });
       }
+      setDocumentContext((current) => [...current, ...contexts]);
+      setPendingImages((current) => [...current, ...imageFiles]);
       setNotes(loadNotes());
-    } catch {
-      setUploadError("That file couldn't be processed. Try a PDF or a .txt file.");
+    } catch (fileError) {
+      console.error("File processing failed:", fileError);
+      setUploadError("Couldn't process that file. Try a PDF, TXT, Markdown file or image.");
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
     }
   }
 
-  function submit(e: React.FormEvent) {
+  async function copyMessage(id: string, text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      window.setTimeout(() => setCopiedId((current) => current === id ? null : current), 1600);
+    } catch {
+      setUploadError("Clipboard access was blocked by your browser.");
+    }
+  }
+
+
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     const text = input.trim();
-    if (!text || isBusy) return;
+    if ((!text && pendingImages.length === 0) || isBusy) return;
     setInput("");
     shouldAutoScrollRef.current = true;
     setShowScrollToBottom(false);
-    const noteContext = retrieveContext(text);
-    void sendMessage({ text }, { body: { noteContext } });
+    const noteContext = documentContext.length
+      ? documentContext
+      : retrieveContext(text);
+    const files = pendingImages;
+    setDocumentContext([]);
+    setPendingImages([]);
+    void sendMessage({ text, files }, { body: { noteContext } });
   }
 
 
@@ -225,18 +254,21 @@ function ChatPage() {
                   .map((p) => (p.type === "text" ? p.text : ""))
                   .join("");
                 return m.role === "user" ? (
-                  <p
-                    key={m.id}
-                    className="ml-auto max-w-[88%] whitespace-pre-wrap rounded-[1.35rem] rounded-br-md border border-primary/20 bg-primary px-4 py-3 text-[14px] leading-relaxed text-primary-foreground shadow-sm sm:max-w-[82%]"
-                  >
-                    {text}
-                  </p>
+                  <div key={m.id} className="ml-auto max-w-[88%] sm:max-w-[82%]">
+                    <div className="whitespace-pre-wrap rounded-[1.35rem] rounded-br-md border border-primary/20 bg-primary px-4 py-3 text-[14px] leading-relaxed text-primary-foreground shadow-sm">{text}</div>
+                    <div className="mt-1 flex justify-end gap-1">
+                      <button type="button" onClick={() => { setInput(text); inputRef.current?.focus(); }} title="Edit message" aria-label="Edit message" className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"><Pencil className="h-3.5 w-3.5" /></button>
+                      <button type="button" onClick={() => void copyMessage(m.id, text)} title="Copy message" aria-label="Copy message" className="inline-flex items-center gap-1 rounded-lg p-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground">{copiedId === m.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}{copiedId === m.id ? "Copied" : ""}</button>
+                    </div>
+                  </div>
                 ) : (
-                  <div
-                    key={m.id}
-                    className="mr-auto w-full max-w-[96%] space-y-3 rounded-2xl rounded-tl-md border border-border/60 bg-card/55 px-4 py-3.5 text-[14px] leading-7 text-foreground shadow-sm [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-secondary [&_code]:px-1.5 [&_code]:py-0.5 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:text-base [&_h2]:font-semibold [&_h3]:font-semibold [&_li]:ml-5 [&_ol]:list-decimal [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-secondary [&_pre]:p-4 [&_ul]:list-disc"
-                  >
-                    <ReactMarkdown>{text}</ReactMarkdown>
+                  <div key={m.id} className="mr-auto w-full max-w-[96%]">
+                    <div className="space-y-3 rounded-2xl rounded-tl-md border border-border/60 bg-card/55 px-4 py-3.5 text-[14px] leading-7 text-foreground shadow-sm [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-secondary [&_code]:px-1.5 [&_code]:py-0.5 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:text-base [&_h2]:font-semibold [&_h3]:font-semibold [&_li]:ml-5 [&_ol]:list-decimal [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-secondary [&_pre]:p-4 [&_ul]:list-disc">
+                      <ReactMarkdown>{text}</ReactMarkdown>
+                    </div>
+                    <div className="mt-1 flex gap-1">
+                      <button type="button" onClick={() => void copyMessage(m.id, text)} title="Copy response" aria-label="Copy response" className="inline-flex items-center gap-1 rounded-lg p-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground">{copiedId === m.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}{copiedId === m.id ? "Copied" : ""}</button>
+                    </div>
                   </div>
                 );
               })}
@@ -270,7 +302,7 @@ function ChatPage() {
         )}
 
         <div className={empty ? "w-full max-w-2xl pb-10" : "w-full max-w-2xl pb-6"}>
-          {(notes.length > 0 || uploadError) && (
+          {(notes.length > 0 || pendingImages.length > 0 || documentContext.length > 0 || uploadError) && (
             <div className="mb-3 flex flex-wrap items-center justify-center gap-2">
               {notes.map((n) => (
                 <span
@@ -292,6 +324,8 @@ function ChatPage() {
                   </button>
                 </span>
               ))}
+              {documentContext.map((doc, index) => <span key={doc.name + index} className="rounded-full bg-primary/10 px-3 py-1.5 text-xs text-primary">{doc.name} · ready</span>)}
+              {pendingImages.map((file, index) => <span key={file.name + index} className="rounded-full bg-primary/10 px-3 py-1.5 text-xs text-primary">{file.name} · image</span>)}
               {uploadError && <span className="text-xs text-destructive">{uploadError}</span>}
             </div>
           )}
@@ -305,7 +339,7 @@ function ChatPage() {
               id="chat-file-upload"
               name="chat-file-upload"
               type="file"
-              accept=".pdf,.txt,.md,text/plain,application/pdf"
+              accept=".pdf,.txt,.md,image/*,text/plain,application/pdf"
               multiple
               className="hidden"
               onChange={(e) => void handleFiles(e.target.files)}
@@ -313,8 +347,8 @@ function ChatPage() {
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              title="Upload notes or PDFs"
-              aria-label="Upload notes or PDFs"
+              title="Upload PDF, text or images"
+              aria-label="Upload PDF, text or images"
               className="mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
