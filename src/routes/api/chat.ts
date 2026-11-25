@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { convertToModelMessages, createUIMessageStream, createUIMessageStreamResponse, generateText, type UIMessage } from "ai";
 import { getShivaProviders } from "@/lib/ai-providers.server";
 import { BOOKSTORE_KB } from "@/lib/bookstore-kb";
+import { getShivaChatDatabase } from "@/lib/chat-cloud.server";
 
 const SYSTEM_PROMPT = `You are Shiva AI, a helpful study assistant for students on BOOKStore.
 Answer professionally and clearly using markdown: headings, bullet points and short paragraphs.
@@ -35,6 +36,23 @@ export const Route = createFileRoute("/api/chat")({
 
           const messages = body.messages as UIMessage[];
           const notes = Array.isArray(body.noteContext) ? body.noteContext.slice(0, 10) : [];
+          const latestUserText = [...(body.messages as UIMessage[])].reverse().find((message) => message.role === "user")?.parts?.filter((part) => part.type === "text").map((part) => part.text).join(" ") || "";
+          let knowledgeBlock = "";
+          try {
+            const snapshot = await getShivaChatDatabase().ref("knowledgeBase/items").get();
+            if (snapshot.exists()) {
+              const terms = [...new Set((latestUserText.toLowerCase().match(/[a-z0-9]{3,}/g) || []))];
+              const ranked = Object.entries(snapshot.val() as Record<string, {title?:string;text?:string;subject?:string;category?:string}>)
+                .map(([id, item]) => { const haystack = [item.title, item.subject, item.category, item.text].join(" ").toLowerCase(); return { id, item, score: terms.reduce((total, term) => total + (haystack.includes(term) ? 1 : 0), 0) }; })
+                .filter(entry => entry.score > 0).sort((a,b) => b.score-a.score).slice(0, 5);
+              let budget = 24000;
+              const selected = ranked.map(({item}, index) => {
+                const excerpt = String(item.text || "").slice(0, Math.min(8000, budget)); budget -= excerpt.length;
+                return excerpt ? `[Knowledge ${index+1}: ${item.title || "Untitled"} | ${item.subject || "General"} / ${item.category || "General"}]\\n${excerpt}` : "";
+              }).filter(Boolean);
+              if (selected.length) knowledgeBlock = "\\n\\nADMIN-MANAGED SHIVA KNOWLEDGE (prioritize relevant verified entries; cite their titles):\\n" + selected.join("\\n\\n");
+            }
+          } catch (error) { console.error("Shiva knowledge retrieval failed:", error); }
           let remainingNoteChars = 90000;
           const notesBlock = notes.length
             ? `\n\nUPLOADED STUDY MATERIAL (use these excerpts and cite their filenames):\n${notes.map((n, i) => {
@@ -77,7 +95,7 @@ export const Route = createFileRoute("/api/chat")({
             try {
               const result = await generateText({
                 model: provider.model,
-                system: SYSTEM_PROMPT + notesBlock,
+                system: SYSTEM_PROMPT + knowledgeBlock + notesBlock,
                 messages: modelMessages,
                 maxRetries: 0,
               });
