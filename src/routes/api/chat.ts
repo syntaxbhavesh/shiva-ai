@@ -50,12 +50,20 @@ export const Route = createFileRoute("/api/chat")({
             parts: (message.parts || []).filter((part) => part.type !== "reasoning"),
           }));
           const modelMessages = await convertToModelMessages(safeMessages);
-          const providers = getShivaProviders();
+          const hasImage = messages.some((message) =>
+            message.parts?.some((part) => part.type === "file" && part.mediaType?.startsWith("image/")),
+          );
+          const configuredProviders = getShivaProviders();
+          const providers = hasImage
+            ? configuredProviders.filter((provider) => provider.name === "Gemini")
+            : configuredProviders;
 
           if (providers.length === 0) {
             return Response.json({
-              error: "No AI provider is configured.",
-              detail: "Configure GROQ_API_KEY, GEMINI_API_KEY, or both CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN in Vercel.",
+              error: hasImage ? "Image analysis needs Gemini." : "No AI provider is configured.",
+              detail: hasImage
+                ? "Add GEMINI_API_KEY in Vercel to analyse uploaded images. Text-only chats can continue using your other configured providers."
+                : "Configure GROQ_API_KEY, GEMINI_API_KEY, or both CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN in Vercel.",
             }, { status: 503 });
           }
 
