@@ -92,3 +92,9 @@ export function setThreadTitle(id: string, title: string) {
 export function deleteThread(id: string) {
   cache(loadThreads().filter((thread) => thread.id !== id));
 }
+
+// Backward-compatible local-only loader for components from the previous cloud-sync UI.
+// This intentionally performs no network or cloud database requests.
+export async function syncCloudThreads(): Promise<Thread[]> {
+  return loadThreads();
+}
