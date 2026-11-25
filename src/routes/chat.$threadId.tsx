@@ -4,6 +4,7 @@ import { DefaultChatTransport } from "ai";
 import { FileText, Loader2, Plus, SendHorizontal, Sparkles, BookOpen, Lightbulb, Atom, X, ChevronDown, CircleHelp, Copy, Pencil, Check, Maximize2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { ShivaSidebar } from "@/components/ShivaSidebar";
 import { ensureThread, persistThread, setThreadTitle, syncCloudThreads, getThread } from "@/lib/chat-store";
 import { addNote, loadNotes, removeNote, retrieveContext, type NoteDoc } from "@/lib/notes-store";
@@ -309,7 +310,31 @@ function ChatPage() {
                 ) : (
                   <div key={m.id} className="mr-auto w-full max-w-[96%]">
                     <div className="space-y-3 rounded-2xl rounded-tl-md border border-border/60 bg-card/55 px-4 py-3.5 text-[14px] leading-7 text-foreground shadow-sm [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-secondary [&_code]:px-1.5 [&_code]:py-0.5 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:text-base [&_h2]:font-semibold [&_h3]:font-semibold [&_li]:ml-5 [&_ol]:list-decimal [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-secondary [&_pre]:p-4 [&_ul]:list-disc">
-                      <ReactMarkdown>{text}</ReactMarkdown>
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          h1: ({ children }) => <h1 className="mb-3 mt-5 text-xl font-semibold tracking-tight first:mt-0">{children}</h1>,
+                          h2: ({ children }) => <h2 className="mb-2 mt-5 text-lg font-semibold tracking-tight first:mt-0">{children}</h2>,
+                          h3: ({ children }) => <h3 className="mb-2 mt-4 text-base font-semibold first:mt-0">{children}</h3>,
+                          p: ({ children }) => <p className="my-2 leading-7 first:mt-0 last:mb-0">{children}</p>,
+                          ul: ({ children }) => <ul className="my-3 list-disc space-y-1.5 pl-6 marker:text-primary">{children}</ul>,
+                          ol: ({ children }) => <ol className="my-3 list-decimal space-y-1.5 pl-6 marker:font-semibold marker:text-primary">{children}</ol>,
+                          li: ({ children }) => <li className="pl-1 leading-7">{children}</li>,
+                          strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+                          blockquote: ({ children }) => <blockquote className="my-3 border-l-[3px] border-primary/60 pl-4 text-muted-foreground">{children}</blockquote>,
+                          hr: () => <hr className="my-5 border-border/70" />,
+                          a: ({ href, children }) => <a href={href} target="_blank" rel="noreferrer" className="font-medium text-primary underline underline-offset-4 hover:opacity-80">{children}</a>,
+                          table: ({ children }) => <div className="my-4 w-full overflow-x-auto rounded-xl border border-border/80"><table className="w-full min-w-[480px] border-collapse text-left text-sm">{children}</table></div>,
+                          thead: ({ children }) => <thead className="bg-secondary/80 text-foreground">{children}</thead>,
+                          th: ({ children }) => <th className="border-b border-border px-3 py-2.5 font-semibold">{children}</th>,
+                          td: ({ children }) => <td className="border-b border-border/60 px-3 py-2.5 align-top leading-6">{children}</td>,
+                          tr: ({ children }) => <tr className="even:bg-secondary/25">{children}</tr>,
+                          pre: ({ children }) => <pre className="my-3 overflow-x-auto rounded-xl border border-border/70 bg-[#111318] p-4 text-[13px] leading-6 text-slate-100">{children}</pre>,
+                          code: ({ children, className }) => className
+                            ? <code className={className}>{children}</code>
+                            : <code className="rounded-md bg-secondary px-1.5 py-0.5 text-[0.9em] font-medium text-foreground">{children}</code>,
+                        }}
+                      >{text}</ReactMarkdown>
                     </div>
                     <div className="mt-1 flex gap-1">
                       <button type="button" onClick={() => void copyMessage(m.id, text)} title="Copy response" aria-label="Copy response" className="inline-flex items-center gap-1 rounded-lg p-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground">{copiedId === m.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}{copiedId === m.id ? "Copied" : ""}</button>
