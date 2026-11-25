@@ -57,7 +57,7 @@ function ChatPage() {
   const [input, setInput] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
-  const [voiceLanguage, setVoiceLanguage] = useState(() => typeof navigator !== "undefined" && navigator.language ? navigator.language : "en-IN");
+  const [voiceLanguage, setVoiceLanguage] = useState("en-IN");
   const voiceStopRequestedRef = useRef(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const voiceBaseTextRef = useRef("");
@@ -537,7 +537,6 @@ function ChatPage() {
               </div>
             ) : (
               <>
-                <input ref={fileRef} id="chat-file-upload" name="chat-file-upload" type="file" accept=".pdf,.docx,.txt,.md,image/png,image/jpeg,image/webp,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple className="hidden" onChange={(e) => void handleFiles(e.target.files)} />
                 <button type="button" onClick={() => fileRef.current?.click()} title="Upload PDF, DOCX, text or images" aria-label="Upload PDF, DOCX, text or images" className="mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
                   {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
                 </button>
@@ -556,7 +555,7 @@ function ChatPage() {
                   placeholder={notes.length > 0 ? "Ask about your notes..." : "Ask Shiva anything..."}
                   className="max-h-36 min-h-9 min-w-0 flex-1 resize-none self-center bg-transparent py-2 text-[15px] leading-5 text-foreground outline-none placeholder:text-muted-foreground"
                 />
-                <select aria-label="Voice recognition language" value={voiceLanguage} onChange={(e) => setVoiceLanguage(e.target.value)} title="Voice language" className="mb-1 hidden max-w-[92px] shrink-0 bg-transparent text-[10px] text-muted-foreground outline-none sm:block">
+                <select aria-label="Voice recognition language" value={voiceLanguage} onChange={(e) => setVoiceLanguage(e.target.value)} title="Voice language" className="mb-1 max-w-[66px] shrink-0 bg-transparent text-[9px] text-muted-foreground outline-none sm:max-w-[92px] sm:text-[10px]">
                   <option value="en-IN">English (India)</option><option value="hi-IN">Hindi</option><option value="en-US">English (US)</option><option value="bn-IN">Bengali</option><option value="ta-IN">Tamil</option><option value="te-IN">Telugu</option><option value="mr-IN">Marathi</option><option value="ur-PK">Urdu</option>
                 </select>
                 <span className="mb-1 hidden shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11px] text-muted-foreground sm:inline-flex">Rudra <ChevronDown className="h-3.5 w-3.5" /></span>
