@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import logo from "@/assets/shiva-logo.png";
 import { deleteThread, loadThreads, newThreadId, type Thread } from "@/lib/chat-store";
 import { ShivaAccount } from "@/components/ShivaAccount";
+import { onAuthStateChanged } from "firebase/auth";
+import { bookstoreAuth } from "@/lib/bookstore-firebase";
+import { syncCloudThreads } from "@/lib/chat-store";
 
 type Panel = "conversations" | "search" | null;
 
@@ -14,20 +17,55 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
   const [logoHovered, setLogoHovered] = useState(false);
   const [threads, setThreads] = useState<Thread[]>([]);
   const [query, setQuery] = useState("");
+  const [loadingThreads, setLoadingThreads] = useState(false);
+  const [threadLoadError, setThreadLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     const refresh = () => setThreads(loadThreads());
     window.addEventListener("shiva-threads-updated", refresh);
     window.addEventListener("storage", refresh);
+    const unsubscribeAuth = onAuthStateChanged(bookstoreAuth, async (user) => {
+      if (!user) {
+        setThreads(loadThreads());
+        return;
+      }
+      setLoadingThreads(true);
+      setThreadLoadError(null);
+      try {
+        await syncCloudThreads();
+        setThreads(loadThreads(user.uid));
+      } catch (error) {
+        console.error("Could not load Shiva AI conversations:", error);
+        setThreads(loadThreads(user.uid));
+        setThreadLoadError("Couldn't sync cloud conversations. Showing saved chats on this device.");
+      } finally {
+        setLoadingThreads(false);
+      }
+    });
     return () => {
+      unsubscribeAuth();
       window.removeEventListener("shiva-threads-updated", refresh);
       window.removeEventListener("storage", refresh);
     };
   }, []);
 
-  function openPanel(next: Panel) {
+  async function openPanel(next: Panel) {
     setThreads(loadThreads());
     setPanel((current) => (current === next ? null : next));
+    if (next === null) return;
+    const user = bookstoreAuth.currentUser;
+    if (!user) return;
+    setLoadingThreads(true);
+    setThreadLoadError(null);
+    try {
+      await syncCloudThreads();
+      if (bookstoreAuth.currentUser?.uid === user.uid) setThreads(loadThreads(user.uid));
+    } catch (error) {
+      console.error("Could not refresh Shiva AI conversations:", error);
+      setThreadLoadError("Couldn't sync cloud conversations. Showing saved chats on this device.");
+    } finally {
+      setLoadingThreads(false);
+    }
   }
 
   function startNewChat() {
