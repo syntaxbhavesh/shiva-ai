@@ -5,10 +5,12 @@ import { FileText, Loader2, Plus, SendHorizontal, Sparkles, BookOpen, Lightbulb,
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { ShivaSidebar } from "@/components/ShivaSidebar";
-import { ensureThread, persistThread, setThreadTitle } from "@/lib/chat-store";
+import { ensureThread, persistThread, setThreadTitle, syncCloudThreads, getThread } from "@/lib/chat-store";
 import { addNote, loadNotes, removeNote, retrieveContext, type NoteDoc } from "@/lib/notes-store";
 import { extractFileText } from "@/lib/pdf-text";
 import { QuizBuilder } from "@/components/QuizBuilder";
+import { onAuthStateChanged } from "firebase/auth";
+import { bookstoreAuth } from "@/lib/bookstore-firebase";
 
 
 export const Route = createFileRoute("/chat/$threadId")({
@@ -47,7 +49,7 @@ function ChatPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  const { messages, sendMessage, status, error } = useChat({
+  const { messages, sendMessage, setMessages, status, error } = useChat({
     id: threadId,
     messages: initial.messages,
     transport: new DefaultChatTransport({ api: "/api/chat" }),
@@ -58,6 +60,24 @@ function ChatPage() {
   useEffect(() => {
     setNotes(loadNotes());
   }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(bookstoreAuth, async (user) => {
+      if (!user) return;
+      try {
+        await syncCloudThreads();
+        if (bookstoreAuth.currentUser?.uid === user.uid) {
+          const saved = getThread(threadId);
+          if (saved?.messages?.length) setMessages(saved.messages);
+        }
+      } catch (syncError) {
+        console.error("Could not restore Shiva AI chats:", syncError);
+      }
+    });
+    return unsubscribe;
+  }, [threadId, setMessages]);
+
+
 
   useEffect(() => {
     if (messages.length > 0) persistThread(threadId, messages);
