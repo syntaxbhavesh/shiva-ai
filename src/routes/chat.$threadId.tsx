@@ -1,18 +1,34 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { FileText, Loader2, Plus, SendHorizontal, Sparkles, BookOpen, Lightbulb, Atom, X, ChevronDown, CircleHelp, Copy, Pencil, Check, Maximize2 } from "lucide-react";
+import { FileText, Loader2, Plus, SendHorizontal, Sparkles, BookOpen, Lightbulb, Atom, X, ChevronDown, CircleHelp, Copy, Pencil, Check, Maximize2, Mic, Square } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ShivaSidebar } from "@/components/ShivaSidebar";
-import { ensureThread, persistThread, setThreadTitle, syncCloudThreads, getThread } from "@/lib/chat-store";
+import { ensureThread, persistThread, setThreadTitle } from "@/lib/chat-store";
 import { addNote, loadNotes, removeNote, retrieveContext, type NoteDoc } from "@/lib/notes-store";
 import { extractFileText } from "@/lib/pdf-text";
 import { QuizBuilder } from "@/components/QuizBuilder";
-import { onAuthStateChanged } from "firebase/auth";
-import { bookstoreAuth } from "@/lib/bookstore-firebase";
 
+
+type SpeechRecognitionResultLike = { isFinal: boolean; [index: number]: { transcript: string } };
+type SpeechRecognitionEventLike = { resultIndex: number; results: ArrayLike<SpeechRecognitionResultLike> };
+type SpeechRecognitionLike = {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: ((event: { error?: string }) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+};
+type SpeechRecognitionWindow = Window & {
+  SpeechRecognition?: new () => SpeechRecognitionLike;
+  webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+};
 
 export const Route = createFileRoute("/chat/$threadId")({
   ssr: false,
@@ -39,6 +55,10 @@ function ChatPage() {
   const { threadId } = Route.useParams();
   const initial = useMemo(() => ensureThread(threadId), [threadId]);
   const [input, setInput] = useState("");
+  const [isListening, setIsListening] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const voiceBaseTextRef = useRef("");
   const [quizMode, setQuizMode] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -74,21 +94,7 @@ function ChatPage() {
     return () => urls.forEach((url) => URL.revokeObjectURL(url));
   }, [pendingImages]);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(bookstoreAuth, async (user) => {
-      if (!user) return;
-      try {
-        await syncCloudThreads();
-        if (bookstoreAuth.currentUser?.uid === user.uid) {
-          const saved = getThread(threadId);
-          setMessages(saved?.messages ?? []);
-        }
-      } catch (syncError) {
-        console.error("Could not restore Shiva AI chats:", syncError);
-      }
-    });
-    return unsubscribe;
-  }, [threadId, setMessages]);
+
 
 
 
@@ -199,8 +205,78 @@ function ChatPage() {
   }
 
 
+  function startVoiceInput() {
+    setVoiceError(null);
+    const SpeechRecognitionCtor = (window as SpeechRecognitionWindow).SpeechRecognition
+      || (window as SpeechRecognitionWindow).webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) {
+      setVoiceError("Voice typing isn't supported in this browser. Try Chrome.");
+      return;
+    }
+    try {
+      const recognition = new SpeechRecognitionCtor();
+      recognition.lang = "hi-IN";
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      voiceBaseTextRef.current = input.trim()
+        ? `${input.trim()} `
+        : "";
+      recognition.onresult = (event) => {
+        let transcript = "";
+        for (let i = 0; i < event.results.length; i += 1) {
+          transcript += event.results[i][0]?.transcript ?? "";
+        }
+        const combined = `${voiceBaseTextRef.current}${transcript}`.trimStart();
+        setInput(combined);
+        if (inputRef.current) {
+          inputRef.current.style.height = "auto";
+          inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 144)}px`;
+        }
+      };
+      recognition.onerror = (event) => {
+        setIsListening(false);
+        recognitionRef.current = null;
+        if (event.error !== "aborted" && event.error !== "no-speech") {
+          setVoiceError(event.error === "not-allowed"
+            ? "Microphone permission was blocked. Allow microphone access and try again."
+            : "Voice typing stopped. Please try again.");
+        }
+      };
+      recognition.onend = () => {
+        setIsListening(false);
+        recognitionRef.current = null;
+      };
+      recognitionRef.current = recognition;
+      recognition.start();
+      setIsListening(true);
+    } catch (voiceStartError) {
+      console.error("Voice input could not start:", voiceStartError);
+      setIsListening(false);
+      setVoiceError("Couldn't start the microphone. Check browser permission and try again.");
+    }
+  }
+
+  function stopVoiceInput() {
+    recognitionRef.current?.stop();
+    setIsListening(false);
+  }
+
+  function cancelVoiceInput() {
+    recognitionRef.current?.abort();
+    recognitionRef.current = null;
+    setIsListening(false);
+    setInput(voiceBaseTextRef.current.trimEnd());
+    setVoiceError(null);
+  }
+
+  useEffect(() => () => {
+    recognitionRef.current?.abort();
+    recognitionRef.current = null;
+  }, []);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (isListening) stopVoiceInput();
     const text = input.trim();
     if ((!text && pendingImages.length === 0) || isBusy) return;
     setInput("");
@@ -418,6 +494,7 @@ function ChatPage() {
             </div>
           )}
 
+          {voiceError && <p role="status" className="mb-2 text-center text-xs text-destructive">{voiceError}</p>}
           <form
             onSubmit={submit}
             className="mx-auto flex w-full min-w-0 items-end gap-2 rounded-[1.75rem] border border-border/80 bg-card/95 px-3 py-3 shadow-[0_12px_40px_-18px_rgba(0,0,0,.7)] backdrop-blur-xl transition-all focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 sm:gap-3 sm:px-4"
@@ -464,15 +541,37 @@ function ChatPage() {
             <span className="mb-1 hidden shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11px] text-muted-foreground sm:inline-flex">
               Rudra <ChevronDown className="h-3.5 w-3.5" />
             </span>
-            <button
-              type="submit"
-              disabled={isBusy || (!input.trim() && pendingImages.length === 0)}
-              aria-label={editingMessageIndex !== null ? "Replace message and regenerate" : "Send message"}
-              title={editingMessageIndex !== null ? "Replace message and regenerate" : "Send message"}
-              className="mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-95 disabled:bg-secondary disabled:text-muted-foreground disabled:shadow-none"
-            >
-              <SendHorizontal className="h-[18px] w-[18px]" />
-            </button>
+            {isListening ? (
+              <div className="mb-0.5 flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full bg-secondary/70 px-2 sm:px-3" aria-live="polite">
+                <button type="button" onClick={cancelVoiceInput} aria-label="Cancel voice input" title="Cancel" className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground">
+                  <X className="h-5 w-5" />
+                </button>
+                <div className="flex min-w-0 flex-1 items-center justify-center gap-[3px]" aria-label="Listening">
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <span key={i} className="w-[3px] rounded-full bg-primary/80 animate-pulse" style={{ height: `${8 + ((i * 13) % 25)}px`, animationDelay: `${(i % 7) * 90}ms`, animationDuration: `${500 + (i % 4) * 140}ms` }} />
+                  ))}
+                </div>
+                <button type="button" onClick={stopVoiceInput} aria-label="Stop recording" title="Stop recording" className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-background text-foreground shadow-sm hover:bg-background/80">
+                  <Square className="h-4 w-4 fill-current" />
+                </button>
+                <button type="submit" disabled={isBusy || !input.trim()} aria-label="Transcribe and send" title="Transcribe and send" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-95 disabled:bg-muted disabled:text-muted-foreground">
+                  <SendHorizontal className="h-[18px] w-[18px]" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type={input.trim() || pendingImages.length > 0 ? "submit" : "button"}
+                onClick={input.trim() || pendingImages.length > 0 ? undefined : startVoiceInput}
+                disabled={isBusy}
+                aria-label={input.trim() || pendingImages.length > 0 ? (editingMessageIndex !== null ? "Replace message and regenerate" : "Send message") : "Start voice input"}
+                title={input.trim() || pendingImages.length > 0 ? "Send message" : "Voice input"}
+                className="mb-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-95 disabled:bg-secondary disabled:text-muted-foreground disabled:shadow-none"
+              >
+                {input.trim() || pendingImages.length > 0
+                  ? <SendHorizontal className="h-[18px] w-[18px]" />
+                  : <Mic className="h-[18px] w-[18px]" />}
+              </button>
+            )}
           </form>
           <p className="mt-2 text-center text-[10px] text-muted-foreground/75">Shiva AI can make mistakes. Check important information.</p>
           <p className="mt-3 text-center text-xs text-muted-foreground">
