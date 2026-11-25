@@ -5,10 +5,33 @@ import { getDatabase } from "firebase-admin/database";
 type ServiceAccount = { project_id?: string; client_email?: string; private_key?: string };
 function parseServiceAccount(raw: string | undefined, name: string): ServiceAccount {
   if (!raw) throw new Error(`${name}_NOT_CONFIGURED`);
-  let account: ServiceAccount;
-  try { account = JSON.parse(raw) as ServiceAccount; }
-  catch { throw new Error(`${name}_MUST_BE_VALID_SERVICE_ACCOUNT_JSON`); }
-  if (!account.project_id || !account.client_email || !account.private_key) throw new Error(`${name}_INVALID_SERVICE_ACCOUNT_JSON`);
+  // Accept the normal downloaded JSON file, a JSON-string-wrapped value, or
+  // an explicitly base64-encoded JSON value. Never log the credential itself.
+  const value = raw.trim().replace(/^\\uFEFF/, "");
+  let parsed: unknown;
+  try {
+    const source = value.startsWith("base64:")
+      ? Buffer.from(value.slice(7), "base64").toString("utf8")
+      : value;
+    parsed = JSON.parse(source);
+    if (typeof parsed === "string") parsed = JSON.parse(parsed);
+  } catch {
+    throw new Error(
+      `${name}_MUST_BE_VALID_SERVICE_ACCOUNT_JSON: paste the complete downloaded Firebase service-account JSON object (not JavaScript code, a variable assignment, or a private key alone)`,
+    );
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error(`${name}_INVALID_SERVICE_ACCOUNT_JSON_OBJECT`);
+  }
+  const account = parsed as ServiceAccount & { type?: string };
+  if (
+    (account.type && account.type !== "service_account") ||
+    !account.project_id ||
+    !account.client_email ||
+    !account.private_key
+  ) {
+    throw new Error(`${name}_INVALID_SERVICE_ACCOUNT_JSON: required type, project_id, client_email, and private_key fields are missing or invalid`);
+  }
   return account;
 }
 function getAdminApp(name: string, envName: string, databaseURL?: string) {
