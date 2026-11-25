@@ -1,3 +1,4 @@
+import { shivaFirebaseConfig } from "@/lib/shiva-firebase-config";
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getDatabase } from "firebase-admin/database";
@@ -50,8 +51,11 @@ export async function verifyBookstoreIdToken(token: string) {
   return decoded;
 }
 export function getShivaChatDatabase() {
-  const url = process.env.SHIVA_FIREBASE_DATABASE_URL;
-  if (!url) throw new Error("SHIVA_FIREBASE_DATABASE_URL_NOT_CONFIGURED");
-  const app = getAdminApp("shiva-chat-database", "SHIVA_FIREBASE_SERVICE_ACCOUNT_JSON", url);
+  // The project URL is public configuration. Admin credentials stay server-only.
+  const app = getAdminApp(
+    "shiva-chat-database",
+    "SHIVA_FIREBASE_SERVICE_ACCOUNT_JSON",
+    shivaFirebaseConfig.databaseURL,
+  );
   return getDatabase(app);
 }
