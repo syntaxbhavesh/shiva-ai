@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { MessageCircle, PanelLeft, PencilLine, Search, Trash2, X } from "lucide-react";
+import { MessageCircle, PanelLeft, PencilLine, Search, Trash2, X, Plug, Youtube, ChevronDown, ExternalLink, CheckCircle2, PlusCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import logo from "@/assets/shiva-logo.png";
 import { deleteThread, loadThreads, newThreadId, type Thread } from "@/lib/chat-store";
@@ -13,7 +13,7 @@ type Panel = "conversations" | "search" | null;
 export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
   const navigate = useNavigate();
   const [panel, setPanel] = useState<Panel>(null);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(false);\n  const [pluginsOpen, setPluginsOpen] = useState(false);\n  const [youtubeDetailsOpen, setYoutubeDetailsOpen] = useState(false);\n  const [youtubeDemoConnected, setYoutubeDemoConnected] = useState(false);
   const [logoHovered, setLogoHovered] = useState(false);
   const [threads, setThreads] = useState<Thread[]>([]);
   const [query, setQuery] = useState("");
@@ -154,6 +154,50 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
             <MessageCircle className="h-[18px] w-[18px] shrink-0" />
             {expanded && <span>Library</span>}
           </button>
+
+          <button
+            type="button"
+            onClick={() => { setPluginsOpen((open) => !open); setYoutubeDetailsOpen(false); }}
+            title="Plugins"
+            aria-label="Plugins"
+            aria-expanded={pluginsOpen}
+            className={`${menuItem} ${expanded ? "" : "w-10 justify-center px-0"} ${pluginsOpen ? "bg-secondary text-foreground" : ""}`}
+          >
+            <Plug className="h-[18px] w-[18px] shrink-0" />
+            {expanded && <><span>Plugins</span><span className="ml-auto text-muted-foreground"><ChevronDown className={`h-4 w-4 transition-transform ${pluginsOpen ? "rotate-180" : ""}`} /></span></>}
+          </button>
+          {pluginsOpen && expanded && (
+            <div className="ml-2 mt-1 space-y-2 rounded-xl border border-border/70 bg-background/70 p-2 animate-[fade-in_.18s_ease-out]">
+              <button
+                type="button"
+                onClick={() => setYoutubeDetailsOpen((open) => !open)}
+                className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors hover:bg-secondary"
+              >
+                <Youtube className="h-4 w-4 text-[#ff0033]" />
+                <span className="flex-1 font-medium">YouTube</span>
+                <span className={`h-2 w-2 rounded-full ${youtubeDemoConnected ? "bg-emerald-500" : "bg-muted-foreground/40"}`} />
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${youtubeDetailsOpen ? "rotate-180" : ""}`} />
+              </button>
+              {youtubeDetailsOpen && (
+                <div className="space-y-2 rounded-lg bg-secondary/60 p-3">
+                  <p className="text-xs leading-relaxed text-muted-foreground">Find educational videos and get recommendations directly in your Shiva AI chats.</p>
+                  <button
+                    type="button"
+                    onClick={() => setYoutubeDemoConnected((connected) => !connected)}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
+                  >
+                    {youtubeDemoConnected ? <><CheckCircle2 className="h-3.5 w-3.5" /> Demo connected</> : <><ExternalLink className="h-3.5 w-3.5" /> Preview authorization</>}
+                  </button>
+                  <p className="text-[10px] leading-relaxed text-muted-foreground">Preview only. Google OAuth will be enabled after Google Cloud credentials and secure token storage are configured.</p>
+                </div>
+              )}
+              <div className="flex items-center gap-2 px-2 py-1 text-xs text-muted-foreground">
+                <PlusCircle className="h-4 w-4" />
+                More plugins coming soon
+              </div>
+              <p className="px-2 text-[10px] text-muted-foreground/70">GitHub · Canva · More</p>
+            </div>
+          )}
         </nav>
 
         {expanded && (
