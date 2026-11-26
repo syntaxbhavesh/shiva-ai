@@ -13,7 +13,10 @@ type Panel = "conversations" | "search" | null;
 export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
   const navigate = useNavigate();
   const [panel, setPanel] = useState<Panel>(null);
-  const [expanded, setExpanded] = useState(false);\n  const [pluginsOpen, setPluginsOpen] = useState(false);\n  const [youtubeDetailsOpen, setYoutubeDetailsOpen] = useState(false);\n  const [youtubeDemoConnected, setYoutubeDemoConnected] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [pluginsOpen, setPluginsOpen] = useState(false);
+  const [youtubeDetailsOpen, setYoutubeDetailsOpen] = useState(false);
+  const [youtubeDemoConnected, setYoutubeDemoConnected] = useState(false);
   const [logoHovered, setLogoHovered] = useState(false);
   const [threads, setThreads] = useState<Thread[]>([]);
   const [query, setQuery] = useState("");
