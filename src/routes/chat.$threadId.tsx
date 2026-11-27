@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { FileText, Loader2, Plus, SendHorizontal, Square, Sparkles, BookOpen, Lightbulb, Atom, X, ChevronDown, CircleHelp, Copy, Pencil, Check, Maximize2, Mic } from "lucide-react";
+import { FileText, Loader2, Plus, SendHorizontal, Square, Sparkles, BookOpen, Lightbulb, Atom, X, ChevronDown, CircleHelp, Copy, Pencil, Check, Maximize2, Mic, MoreHorizontal, Pin, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ShivaSidebar } from "@/components/ShivaSidebar";
-import { ensureThread, persistThread, setThreadTitle } from "@/lib/chat-store";
+import { deleteThread, ensureThread, getThread, newThreadId, persistThread, setThreadTitle, toggleThreadPinned } from "@/lib/chat-store";
 import { addNote, loadNotes, removeNote, retrieveContext, type NoteDoc } from "@/lib/notes-store";
 import { extractFileText } from "@/lib/pdf-text";
 import { QuizBuilder } from "@/components/QuizBuilder";
@@ -77,6 +77,8 @@ function ChatPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
   const [chatTitle, setChatTitle] = useState(initial.title || "Shiva AI");
+  const [chatMenuOpen, setChatMenuOpen] = useState(false);
+  const [isPinned, setIsPinned] = useState(Boolean(getThread(threadId)?.pinned));
 
   const { messages, sendMessage, setMessages, status, error, stop } = useChat({
     id: threadId,
@@ -88,7 +90,10 @@ function ChatPage() {
 
   useEffect(() => {
     setNotes(loadNotes());
-  }, []);
+    const refreshPinned = () => setIsPinned(Boolean(getThread(threadId)?.pinned));
+    window.addEventListener("shiva-threads-updated", refreshPinned);
+    return () => window.removeEventListener("shiva-threads-updated", refreshPinned);
+  }, [threadId]);
 
   useEffect(() => {
     const urls = pendingImages.map((file) => URL.createObjectURL(file));
@@ -324,7 +329,7 @@ function ChatPage() {
       <ShivaSidebar activeThreadId={threadId} />
 
       <main className="relative z-10 ml-14 flex h-full min-h-0 flex-col items-center overflow-hidden px-3 sm:px-5">
-        {!quizMode && <div className="flex w-full max-w-4xl shrink-0 items-center justify-between gap-3 pt-3"><h1 className="min-w-0 truncate text-base font-semibold tracking-tight text-foreground">{empty ? "Shiva AI" : chatTitle}</h1><button type="button" onClick={() => setQuizMode(true)} className="inline-flex shrink-0 items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3.5 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/15 active:scale-[.98]"><CircleHelp className="h-4 w-4" /> Create a quiz</button></div>}
+        {!quizMode && <div className="flex w-full max-w-4xl shrink-0 items-center justify-between gap-3 pt-3"><h1 className="min-w-0 truncate text-base font-semibold tracking-tight text-foreground">{empty ? "Shiva AI" : chatTitle}</h1><div className="flex shrink-0 items-center gap-2"><button type="button" onClick={() => setQuizMode(true)} className="inline-flex shrink-0 items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3.5 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/15 active:scale-[.98]"><CircleHelp className="h-4 w-4" /> Create a quiz</button>{!empty && <div className="relative hidden md:block"><button type="button" onClick={() => setChatMenuOpen((open) => !open)} aria-label="Chat options" title="Chat options" className="grid h-9 w-9 place-items-center rounded-full border border-border/70 bg-card/80 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"><MoreHorizontal className="h-5 w-5" /></button>{chatMenuOpen && <><button type="button" aria-label="Close chat options" className="fixed inset-0 z-40 cursor-default" onClick={() => setChatMenuOpen(false)} /><div className="absolute right-0 top-11 z-50 w-52 rounded-xl border border-border bg-popover p-1.5 shadow-xl"><button type="button" onClick={() => { toggleThreadPinned(threadId); setIsPinned(Boolean(getThread(threadId)?.pinned)); setChatMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-foreground hover:bg-secondary"><Pin className="h-4 w-4" />{isPinned ? "Unpin chat" : "Pin chat"}</button><button type="button" onClick={() => { const next = window.prompt("Rename this chat", chatTitle); if (next?.trim()) { setThreadTitle(threadId, next); setChatTitle(next.trim().slice(0, 64)); } setChatMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-foreground hover:bg-secondary"><Pencil className="h-4 w-4" /> Rename</button><button type="button" onClick={() => { setChatMenuOpen(false); if (window.confirm("Permanently delete this chat? This cannot be undone.")) { deleteThread(threadId); void navigate({ to: "/chat/$threadId", params: { threadId: newThreadId() } }); } }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /> Delete permanently</button></div></>}</div>}</div></div>}
         {quizMode ? (
           <QuizBuilder onClose={() => setQuizMode(false)} />
         ) : empty ? (
