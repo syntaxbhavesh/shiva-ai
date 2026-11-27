@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { FileText, Loader2, Plus, SendHorizontal, Square, Sparkles, BookOpen, Lightbulb, Atom, X, ChevronDown, CircleHelp, Copy, Pencil, Check, Maximize2, Mic, MoreHorizontal, Pin, Trash2 } from "lucide-react";
+import { FileText, Loader2, Plus, SendHorizontal, Square, Sparkles, BookOpen, Lightbulb, Atom, X, ChevronDown, Copy, Pencil, Check, Maximize2, Mic, MoreHorizontal, Pin, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -74,6 +74,7 @@ function ChatPage() {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const voiceBaseTextRef = useRef("");
   const [quizMode, setQuizMode] = useState(false);
+  const [quizTopic, setQuizTopic] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -304,6 +305,17 @@ function ChatPage() {
     }
     const text = input.trim();
     if ((!text && pendingImages.length === 0) || isBusy) return;
+    const quizRequest = text.match(/\b(?:create|make|generate|start)\s+(?:me\s+)?(?:an?\s+)?(?:interactive\s+)?quiz\s+(?:on|about|for|from|covering)\s+(.+)/i)
+      || text.match(/\bquiz\s+me\s+(?:on|about|from)\s+(.+)/i);
+    if (quizRequest && pendingImages.length === 0) {
+      const topic = (quizRequest[1] || quizRequest[2]).replace(/[?.!]+$/, "").trim();
+      if (topic) {
+        setQuizTopic(topic);
+        setQuizMode(true);
+        setInput("");
+        return;
+      }
+    }
     setInput("");
     if (chatTitle === "New chat" || chatTitle === "Shiva AI") setChatTitle(text.slice(0, 40) || "Shiva AI");
     shouldAutoScrollRef.current = true;
@@ -342,9 +354,9 @@ function ChatPage() {
       <ShivaSidebar activeThreadId={threadId} />
 
       <main className="relative z-10 ml-14 flex h-full min-h-0 flex-col items-center overflow-hidden px-3 sm:px-5">
-        {!quizMode && <div className="flex w-full max-w-4xl shrink-0 items-center justify-between gap-3 pt-3"><h1 className="min-w-0 truncate text-base font-semibold tracking-tight text-foreground">{empty ? "Shiva AI" : chatTitle}</h1><div className="flex shrink-0 items-center gap-2"><button type="button" onClick={() => setQuizMode(true)} className="inline-flex shrink-0 items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3.5 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/15 active:scale-[.98]"><CircleHelp className="h-4 w-4" /> Create a quiz</button>{!empty && <div className="relative hidden md:block"><button type="button" onClick={() => setChatMenuOpen((open) => !open)} aria-label="Chat options" title="Chat options" className="grid h-9 w-9 place-items-center rounded-full border border-border/70 bg-card/80 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"><MoreHorizontal className="h-5 w-5" /></button>{chatMenuOpen && <><button type="button" aria-label="Close chat options" className="fixed inset-0 z-40 cursor-default" onClick={() => setChatMenuOpen(false)} /><div className="absolute right-0 top-11 z-50 w-52 rounded-xl border border-border bg-popover p-1.5 shadow-xl"><button type="button" onClick={() => { toggleThreadPinned(threadId); setIsPinned(Boolean(getThread(threadId)?.pinned)); setChatMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-foreground hover:bg-secondary"><Pin className="h-4 w-4" />{isPinned ? "Unpin chat" : "Pin chat"}</button><button type="button" onClick={() => { const next = window.prompt("Rename this chat", chatTitle); if (next?.trim()) { setThreadTitle(threadId, next); setChatTitle(next.trim().slice(0, 64)); } setChatMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-foreground hover:bg-secondary"><Pencil className="h-4 w-4" /> Rename</button><button type="button" onClick={() => { setChatMenuOpen(false); if (window.confirm("Permanently delete this chat? This cannot be undone.")) { deletedThreadRef.current = true; deleteThread(threadId); void navigate({ to: "/chat/$threadId", params: { threadId: newThreadId() } }); } }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /> Delete permanently</button></div></>}</div>}</div></div>}
+        {!quizMode && <div className="flex w-full max-w-4xl shrink-0 items-center justify-between gap-3 pt-3"><h1 className="min-w-0 truncate text-base font-semibold tracking-tight text-foreground">{empty ? "Shiva AI" : chatTitle}</h1><div className="flex shrink-0 items-center gap-2">{!empty && <div className="relative hidden md:block"><button type="button" onClick={() => setChatMenuOpen((open) => !open)} aria-label="Chat options" title="Chat options" className="grid h-9 w-9 place-items-center rounded-full border border-border/70 bg-card/80 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"><MoreHorizontal className="h-5 w-5" /></button>{chatMenuOpen && <><button type="button" aria-label="Close chat options" className="fixed inset-0 z-40 cursor-default" onClick={() => setChatMenuOpen(false)} /><div className="absolute right-0 top-11 z-50 w-52 rounded-xl border border-border bg-popover p-1.5 shadow-xl"><button type="button" onClick={() => { toggleThreadPinned(threadId); setIsPinned(Boolean(getThread(threadId)?.pinned)); setChatMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-foreground hover:bg-secondary"><Pin className="h-4 w-4" />{isPinned ? "Unpin chat" : "Pin chat"}</button><button type="button" onClick={() => { const next = window.prompt("Rename this chat", chatTitle); if (next?.trim()) { setThreadTitle(threadId, next); setChatTitle(next.trim().slice(0, 64)); } setChatMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-foreground hover:bg-secondary"><Pencil className="h-4 w-4" /> Rename</button><button type="button" onClick={() => { setChatMenuOpen(false); if (window.confirm("Permanently delete this chat? This cannot be undone.")) { deletedThreadRef.current = true; deleteThread(threadId); void navigate({ to: "/chat/$threadId", params: { threadId: newThreadId() } }); } }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /> Delete permanently</button></div></>}</div>}</div></div>}
         {quizMode ? (
-          <QuizBuilder onClose={() => setQuizMode(false)} />
+          <QuizBuilder initialTopic={quizTopic} autoStart={Boolean(quizTopic)} onClose={() => { setQuizMode(false); setQuizTopic(""); }} />
         ) : empty ? (
           <div className="flex w-full max-w-2xl min-h-0 flex-1 flex-col justify-center gap-7 overflow-y-auto py-8">
             <div className="space-y-3 text-center">
@@ -364,10 +376,7 @@ function ChatPage() {
                   <span className="text-xs font-medium text-foreground">{title}</span>
                 </button>
               ))}
-              <button type="button" onClick={() => setQuizMode(true)} className="group col-span-2 flex min-h-16 items-center gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-4 text-left transition-all hover:border-primary/60 hover:bg-primary/10 active:scale-[.99]">
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary"><CircleHelp className="h-5 w-5" /></span>
-                <span><span className="block text-sm font-semibold">Create an interactive quiz</span><span className="block text-xs text-muted-foreground">Choose a topic, answer questions and see your score</span></span>
-              </button>
+
             </div>
           </div>
         ) : (
