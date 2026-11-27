@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { MessageCircle, PanelLeft, PencilLine, Search, Trash2, X } from "lucide-react";
+import { MessageCircle, PanelLeft, PencilLine, Search, Trash2, X, Pin } from "lucide-react";
 import { useEffect, useState } from "react";
 import logo from "@/assets/shiva-logo.png";
 import { deleteThread, loadThreads, newThreadId, type Thread } from "@/lib/chat-store";
@@ -278,7 +278,7 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
                   }}
                   className="min-w-0 flex-1 text-left"
                 >
-                  <span className="block truncate font-medium">{thread.title || "New chat"}</span>
+                  <span className="flex min-w-0 items-center gap-1.5"><span className="block min-w-0 truncate font-medium">{thread.title || "New chat"}</span>{thread.pinned && <Pin className="h-3 w-3 shrink-0 text-primary" aria-label="Pinned chat" />}</span>
                   {normalizedQuery && getSearchExcerpt(thread) && (
                     <span className="mt-1 block line-clamp-2 text-xs leading-relaxed text-muted-foreground">{getSearchExcerpt(thread)}</span>
                   )}
