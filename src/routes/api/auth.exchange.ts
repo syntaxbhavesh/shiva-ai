@@ -3,7 +3,7 @@ import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 
 function getAdminAuth() {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  const raw = process.env.SHIVA_FIREBASE_SERVICE_ACCOUNT_JSON || process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!raw) throw new Error("BOOKSTORE_SSO_NOT_CONFIGURED");
   const serviceAccount = JSON.parse(raw) as {
     project_id?: string;
