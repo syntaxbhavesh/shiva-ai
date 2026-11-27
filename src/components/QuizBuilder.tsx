@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, CheckCircle2, CircleHelp, Loader2, RotateCcw, Trophy } from "lucide-react";
 
 type Question = {
@@ -9,8 +9,9 @@ type Question = {
 };
 type Quiz = { title: string; questions: Question[] };
 
-export function QuizBuilder({ onClose }: { onClose: () => void }) {
-  const [topic, setTopic] = useState("");
+export function QuizBuilder({ onClose, initialTopic = "", autoStart = false }: { onClose: () => void; initialTopic?: string; autoStart?: boolean }) {
+  const [topic, setTopic] = useState(initialTopic);
+  const autoStarted = useRef(false);
   const [count, setCount] = useState("5");
   const [difficulty, setDifficulty] = useState("Mixed");
   const [quiz, setQuiz] = useState<Quiz | null>(null);
@@ -19,9 +20,8 @@ export function QuizBuilder({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function createQuiz(event: React.FormEvent) {
-    event.preventDefault();
-    if (!topic.trim() || loading) return;
+  async function generateQuiz(topicToUse = topic) {
+    if (!topicToUse.trim() || loading) return;
     setLoading(true);
     setError("");
     setQuiz(null);
@@ -31,7 +31,7 @@ export function QuizBuilder({ onClose }: { onClose: () => void }) {
       const response = await fetch("/api/quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic: topic.trim(), count: Number(count), difficulty }),
+        body: JSON.stringify({ topic: topicToUse.trim(), count: Number(count), difficulty }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || data.error || "Quiz generation failed.");
@@ -42,6 +42,18 @@ export function QuizBuilder({ onClose }: { onClose: () => void }) {
       setLoading(false);
     }
   }
+
+  async function createQuiz(event: React.FormEvent) {
+    event.preventDefault();
+    await generateQuiz();
+  }
+
+  useEffect(() => {
+    if (!initialTopic.trim() || !autoStart || autoStarted.current) return;
+    autoStarted.current = true;
+    setTopic(initialTopic);
+    void generateQuiz(initialTopic);
+  }, [initialTopic, autoStart]);
 
   function resetQuiz() {
     setQuiz(null);
