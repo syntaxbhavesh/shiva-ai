@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { FileText, Loader2, Plus, SendHorizontal, Sparkles, BookOpen, Lightbulb, Atom, X, ChevronDown, CircleHelp, Copy, Pencil, Check, Maximize2, Mic, Pause } from "lucide-react";
+import { FileText, Loader2, Plus, SendHorizontal, Square, Sparkles, BookOpen, Lightbulb, Atom, X, ChevronDown, CircleHelp, Copy, Pencil, Check, Maximize2, Mic, Pause } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -424,10 +424,10 @@ function ChatPage() {
                 );
               })}
               {status === "submitted" && (
-                <div className="mr-auto flex items-center gap-3 text-sm text-muted-foreground"><span className="animate-pulse">Thinking…</span><button type="button" onClick={() => stop()} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"><Pause className="h-3.5 w-3.5" /> Stop</button></div>
+                <div className="mr-auto flex items-center gap-3 text-sm text-muted-foreground"><span className="animate-pulse">Thinking…</span></div>
               )}
               {status === "streaming" && (
-                <div className="mr-auto flex items-center gap-3 text-sm text-muted-foreground"><span className="animate-pulse">Shiva AI is replying…</span><button type="button" onClick={() => stop()} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"><Pause className="h-3.5 w-3.5" /> Stop</button></div>
+                <div className="mr-auto flex items-center gap-3 text-sm text-muted-foreground"><span className="animate-pulse">Shiva AI is replying…</span></div>
               )}
               {error && (
                 <p role="alert" className="mr-auto max-w-[92%] rounded-xl bg-destructive/15 px-4 py-3 text-sm text-destructive">
@@ -530,8 +530,8 @@ function ChatPage() {
                   ))}
                 </div>
                 
-                <button type="submit" disabled={isBusy || !input.trim()} aria-label="Send transcribed message" title="Send transcribed message" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-95 disabled:bg-muted disabled:text-muted-foreground">
-                  <SendHorizontal className="h-5 w-5" />
+                <button type={isBusy ? "button" : "submit"} onClick={isBusy ? () => stop() : undefined} disabled={!isBusy && !input.trim()} aria-label={isBusy ? "Stop response" : "Send transcribed message"} title={isBusy ? "Stop response" : "Send transcribed message"} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-95 disabled:bg-muted disabled:text-muted-foreground">
+                  {isBusy ? <Square className="h-4 w-4 fill-current" /> : <SendHorizontal className="h-5 w-5" />}
                 </button>
               </div>
             ) : (
@@ -555,11 +555,11 @@ function ChatPage() {
                   className="max-h-36 min-h-9 min-w-0 flex-1 resize-none self-center bg-transparent py-2 text-[15px] leading-5 text-foreground outline-none placeholder:text-muted-foreground"
                 />
                 <span className="mb-1 hidden shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11px] text-muted-foreground sm:inline-flex">Rudra <ChevronDown className="h-3.5 w-3.5" /></span>
-                <button type={input.trim() || pendingImages.length > 0 ? "submit" : "button"} onClick={input.trim() || pendingImages.length > 0 ? undefined : startVoiceInput} disabled={isBusy}
-                  aria-label={input.trim() || pendingImages.length > 0 ? (editingMessageIndex !== null ? "Replace message and regenerate" : "Send message") : "Start voice input"}
-                  title={input.trim() || pendingImages.length > 0 ? "Send message" : "Start voice input"}
-                  className="mb-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-95 disabled:bg-secondary disabled:text-muted-foreground disabled:shadow-none">
-                  {input.trim() || pendingImages.length > 0 ? <SendHorizontal className="h-[18px] w-[18px]" /> : <Mic className="h-[18px] w-[18px]" />}
+                <button type={isBusy ? "button" : input.trim() || pendingImages.length > 0 ? "submit" : "button"} onClick={isBusy ? () => stop() : input.trim() || pendingImages.length > 0 ? undefined : startVoiceInput}
+                  aria-label={isBusy ? "Stop response" : input.trim() || pendingImages.length > 0 ? (editingMessageIndex !== null ? "Replace message and regenerate" : "Send message") : "Start voice input"}
+                  title={isBusy ? "Stop response" : input.trim() || pendingImages.length > 0 ? "Send message" : "Start voice input"}
+                  className="mb-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-95">
+                  {isBusy ? <Square className="h-4 w-4 fill-current" /> : input.trim() || pendingImages.length > 0 ? <SendHorizontal className="h-[18px] w-[18px]" /> : <Mic className="h-[18px] w-[18px]" />}
                 </button>
               </>
             )}
