@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { MessageCircle, PanelLeft, PencilLine, Search, Trash2, X, Clock3 } from "lucide-react";
+import { MessageCircle, PanelLeft, PencilLine, Search, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import logo from "@/assets/shiva-logo.png";
 import { deleteThread, loadThreads, newThreadId, type Thread } from "@/lib/chat-store";
@@ -21,6 +21,8 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
   const [threadLoadError, setThreadLoadError] = useState<string | null>(null);
 
   useEffect(() => {
+    const closePanels = () => setPanel(null);
+    window.addEventListener("shiva-close-chat-panels", closePanels);
     const refresh = () => setThreads(loadThreads());
     window.addEventListener("shiva-threads-updated", refresh);
     window.addEventListener("storage", refresh);
@@ -44,6 +46,7 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
     });
     return () => {
       unsubscribeAuth();
+      window.removeEventListener("shiva-close-chat-panels", closePanels);
       window.removeEventListener("shiva-threads-updated", refresh);
       window.removeEventListener("storage", refresh);
     };
@@ -297,9 +300,6 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
                 </div>
               </section>
             ) : null)}
-          </div>
-          <div className="mt-2 border-t border-border/70 pt-3 text-[11px] text-muted-foreground">
-            <Clock3 className="mr-1 inline h-3.5 w-3.5" /> Chats are saved on this device
           </div>
         </div>
       )}
