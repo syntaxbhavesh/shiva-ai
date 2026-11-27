@@ -4,6 +4,7 @@ import { bookstoreAuth } from "@/lib/bookstore-firebase";
 export type Thread = {
   id: string;
   title: string;
+  pinned?: boolean;
   updatedAt: number;
   createdAt?: number;
   messages: UIMessage[];
@@ -36,7 +37,7 @@ function readThreads(uid = bookstoreAuth.currentUser?.uid): Thread[] {
       !!thread && typeof thread === "object" &&
       typeof (thread as Thread).id === "string" &&
       Array.isArray((thread as Thread).messages),
-    ).sort((a, b) => (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0));
+    ).sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0));
   } catch {
     return [];
   }
@@ -87,6 +88,13 @@ export function setThreadTitle(id: string, title: string) {
   const index = threads.findIndex((thread) => thread.id === id);
   if (index < 0) return;
   threads[index] = { ...threads[index], title: clean, updatedAt: Date.now() };
+  cache(threads);
+}
+export function toggleThreadPinned(id: string) {
+  const threads = loadThreads();
+  const index = threads.findIndex((thread) => thread.id === id);
+  if (index < 0) return;
+  threads[index] = { ...threads[index], pinned: !threads[index].pinned };
   cache(threads);
 }
 export function deleteThread(id: string) {
