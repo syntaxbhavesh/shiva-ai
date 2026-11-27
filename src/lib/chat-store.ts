@@ -74,6 +74,7 @@ export function persistThread(id: string, messages: UIMessage[]) {
     id,
     title: old?.title && old.title !== "New chat" ? old.title : titleText ? titleText.slice(0, 40) : "New chat",
     createdAt: old?.createdAt ?? Date.now(),
+    pinned: old?.pinned,
     updatedAt: Date.now(),
     messages,
   };
