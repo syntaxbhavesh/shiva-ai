@@ -5,6 +5,9 @@ import { FileText, Loader2, Plus, SendHorizontal, Square, Sparkles, BookOpen, Li
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 import { ShivaSidebar } from "@/components/ShivaSidebar";
 import { deleteThread, ensureThread, getThread, newThreadId, persistThread, setThreadTitle, toggleThreadPinned } from "@/lib/chat-store";
 import { addNote, loadNotes, removeNote, retrieveContext, type NoteDoc } from "@/lib/notes-store";
@@ -53,6 +56,8 @@ export const Route = createFileRoute("/chat/$threadId")({
 
 function ChatPage() {
   const { threadId } = Route.useParams();
+  const navigate = Route.useNavigate();
+  const deletedThreadRef = useRef(false);
   const initial = useMemo(() => ensureThread(threadId), [threadId]);
   const [input, setInput] = useState("");
   const [isListening, setIsListening] = useState(false);
@@ -106,7 +111,7 @@ function ChatPage() {
 
 
   useEffect(() => {
-    if (messages.length > 0 && status !== "streaming") persistThread(threadId, messages);
+    if (!deletedThreadRef.current && messages.length > 0 && status !== "streaming") persistThread(threadId, messages);
   }, [messages, status, threadId]);
 
   // Ask the configured AI provider to title the whole conversation after each
@@ -329,7 +334,7 @@ function ChatPage() {
       <ShivaSidebar activeThreadId={threadId} />
 
       <main className="relative z-10 ml-14 flex h-full min-h-0 flex-col items-center overflow-hidden px-3 sm:px-5">
-        {!quizMode && <div className="flex w-full max-w-4xl shrink-0 items-center justify-between gap-3 pt-3"><h1 className="min-w-0 truncate text-base font-semibold tracking-tight text-foreground">{empty ? "Shiva AI" : chatTitle}</h1><div className="flex shrink-0 items-center gap-2"><button type="button" onClick={() => setQuizMode(true)} className="inline-flex shrink-0 items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3.5 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/15 active:scale-[.98]"><CircleHelp className="h-4 w-4" /> Create a quiz</button>{!empty && <div className="relative hidden md:block"><button type="button" onClick={() => setChatMenuOpen((open) => !open)} aria-label="Chat options" title="Chat options" className="grid h-9 w-9 place-items-center rounded-full border border-border/70 bg-card/80 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"><MoreHorizontal className="h-5 w-5" /></button>{chatMenuOpen && <><button type="button" aria-label="Close chat options" className="fixed inset-0 z-40 cursor-default" onClick={() => setChatMenuOpen(false)} /><div className="absolute right-0 top-11 z-50 w-52 rounded-xl border border-border bg-popover p-1.5 shadow-xl"><button type="button" onClick={() => { toggleThreadPinned(threadId); setIsPinned(Boolean(getThread(threadId)?.pinned)); setChatMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-foreground hover:bg-secondary"><Pin className="h-4 w-4" />{isPinned ? "Unpin chat" : "Pin chat"}</button><button type="button" onClick={() => { const next = window.prompt("Rename this chat", chatTitle); if (next?.trim()) { setThreadTitle(threadId, next); setChatTitle(next.trim().slice(0, 64)); } setChatMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-foreground hover:bg-secondary"><Pencil className="h-4 w-4" /> Rename</button><button type="button" onClick={() => { setChatMenuOpen(false); if (window.confirm("Permanently delete this chat? This cannot be undone.")) { deleteThread(threadId); void navigate({ to: "/chat/$threadId", params: { threadId: newThreadId() } }); } }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /> Delete permanently</button></div></>}</div>}</div></div>}
+        {!quizMode && <div className="flex w-full max-w-4xl shrink-0 items-center justify-between gap-3 pt-3"><h1 className="min-w-0 truncate text-base font-semibold tracking-tight text-foreground">{empty ? "Shiva AI" : chatTitle}</h1><div className="flex shrink-0 items-center gap-2"><button type="button" onClick={() => setQuizMode(true)} className="inline-flex shrink-0 items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3.5 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/15 active:scale-[.98]"><CircleHelp className="h-4 w-4" /> Create a quiz</button>{!empty && <div className="relative hidden md:block"><button type="button" onClick={() => setChatMenuOpen((open) => !open)} aria-label="Chat options" title="Chat options" className="grid h-9 w-9 place-items-center rounded-full border border-border/70 bg-card/80 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"><MoreHorizontal className="h-5 w-5" /></button>{chatMenuOpen && <><button type="button" aria-label="Close chat options" className="fixed inset-0 z-40 cursor-default" onClick={() => setChatMenuOpen(false)} /><div className="absolute right-0 top-11 z-50 w-52 rounded-xl border border-border bg-popover p-1.5 shadow-xl"><button type="button" onClick={() => { toggleThreadPinned(threadId); setIsPinned(Boolean(getThread(threadId)?.pinned)); setChatMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-foreground hover:bg-secondary"><Pin className="h-4 w-4" />{isPinned ? "Unpin chat" : "Pin chat"}</button><button type="button" onClick={() => { const next = window.prompt("Rename this chat", chatTitle); if (next?.trim()) { setThreadTitle(threadId, next); setChatTitle(next.trim().slice(0, 64)); } setChatMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-foreground hover:bg-secondary"><Pencil className="h-4 w-4" /> Rename</button><button type="button" onClick={() => { setChatMenuOpen(false); if (window.confirm("Permanently delete this chat? This cannot be undone.")) { deletedThreadRef.current = true; deleteThread(threadId); void navigate({ to: "/chat/$threadId", params: { threadId: newThreadId() } }); } }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /> Delete permanently</button></div></>}</div>}</div></div>}
         {quizMode ? (
           <QuizBuilder onClose={() => setQuizMode(false)} />
         ) : empty ? (
@@ -397,7 +402,8 @@ function ChatPage() {
                   <div key={m.id} className="mr-auto w-full max-w-[96%]">
                     <div className="space-y-3 rounded-2xl rounded-tl-md border border-border/60 bg-card/55 px-4 py-3.5 text-[14px] leading-7 text-foreground shadow-sm [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-secondary [&_code]:px-1.5 [&_code]:py-0.5 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:text-base [&_h2]:font-semibold [&_h3]:font-semibold [&_li]:ml-5 [&_ol]:list-decimal [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-secondary [&_pre]:p-4 [&_ul]:list-disc">
                       <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
+                        remarkPlugins={[remarkGfm, remarkMath]}
+                        rehypePlugins={[rehypeKatex]}
                         components={{
                           h1: ({ children }) => <h1 className="mb-3 mt-5 text-xl font-semibold tracking-tight first:mt-0">{children}</h1>,
                           h2: ({ children }) => <h2 className="mb-2 mt-5 text-lg font-semibold tracking-tight first:mt-0">{children}</h2>,
@@ -420,7 +426,7 @@ function ChatPage() {
                             ? <code className={className}>{children}</code>
                             : <code className="rounded-md bg-secondary px-1.5 py-0.5 text-[0.9em] font-medium text-foreground">{children}</code>,
                         }}
-                      >{text}</ReactMarkdown>
+                      >{formatMathForMarkdown(text)}</ReactMarkdown>
                     </div>
                     <div className="mt-1 flex gap-1">
                       <button type="button" onClick={() => void copyMessage(m.id, text)} title="Copy response" aria-label="Copy response" className="inline-flex items-center gap-1 rounded-lg p-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground">{copiedId === m.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}{copiedId === m.id ? "Copied" : ""}</button>
