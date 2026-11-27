@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { MessageCircle, PanelLeft, PencilLine, Search, Trash2, X } from "lucide-react";
+import { MessageCircle, PanelLeft, PencilLine, Search, Trash2, X, Clock3 } from "lucide-react";
 import { useEffect, useState } from "react";
 import logo from "@/assets/shiva-logo.png";
 import { deleteThread, loadThreads, newThreadId, type Thread } from "@/lib/chat-store";
@@ -73,10 +73,50 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
     void navigate({ to: "/chat/$threadId", params: { threadId: newThreadId() } });
   }
 
-  const visible =
-    panel === "search" && query.trim()
-      ? threads.filter((t) => t.title.toLowerCase().includes(query.trim().toLowerCase()))
-      : threads;
+  const normalizedQuery = query.trim().toLowerCase();
+  const visible = normalizedQuery
+    ? threads.filter((thread) => {
+        const titleMatches = thread.title.toLowerCase().includes(normalizedQuery);
+        const messageMatches = thread.messages.some((message) =>
+          message.parts.some((part) =>
+            part.type === "text" && part.text.toLowerCase().includes(normalizedQuery),
+          ),
+        );
+        return titleMatches || messageMatches;
+      })
+    : threads;
+
+  function getSearchExcerpt(thread: Thread) {
+    if (!normalizedQuery) return "";
+    const matchingText = thread.messages
+      .flatMap((message) => message.parts.map((part) => part.type === "text" ? part.text : ""))
+      .find((text) => text.toLowerCase().includes(normalizedQuery));
+    if (!matchingText) return "";
+    const index = matchingText.toLowerCase().indexOf(normalizedQuery);
+    const start = Math.max(0, index - 42);
+    const end = Math.min(matchingText.length, index + normalizedQuery.length + 68);
+    return `${start > 0 ? "…" : ""}${matchingText.slice(start, end).replace(/\s+/g, " ")}${end < matchingText.length ? "…" : ""}`;
+  }
+
+  function getDateGroup(timestamp: number) {
+    const date = new Date(timestamp || 0);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const day = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+    const daysAgo = Math.floor((today - day) / 86400000);
+    if (daysAgo <= 0) return "Today";
+    if (daysAgo === 1) return "Yesterday";
+    if (daysAgo < 7) return "Previous 7 days";
+    if (daysAgo < 30) return "Previous 30 days";
+    return "Older";
+  }
+
+  const groupedThreads = visible.reduce<Record<string, Thread[]>>((groups, thread) => {
+    const group = getDateGroup(thread.updatedAt);
+    (groups[group] ??= []).push(thread);
+    return groups;
+  }, {});
+  const groupOrder = ["Today", "Yesterday", "Previous 7 days", "Previous 30 days", "Older"];
 
   const menuItem =
     "flex h-10 w-full items-center gap-3 rounded-xl px-3 text-sm text-muted-foreground transition-colors hover:bg-secondary/80 hover:text-foreground active:scale-[.98]";
@@ -176,11 +216,11 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
       </aside>
 
       {panel && (
-        <div className={`fixed top-0 z-30 h-full w-72 animate-[slide-in-left_0.28s_ease-out] border-r border-border bg-sidebar/95 p-4 shadow-2xl backdrop-blur-md ${expanded ? "left-64" : "left-14"}`}>
+        <div className={`fixed top-0 z-30 flex h-full w-80 flex-col animate-[slide-in-left_0.28s_ease-out] border-r border-border bg-sidebar/95 p-4 shadow-2xl backdrop-blur-md ${expanded ? "left-64" : "left-14"}`}>
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold">
-              {panel === "search" ? "Search chats" : "Conversations"}
-            </h2>
+            <div className="min-w-0"><h2 className="text-sm font-semibold">
+              {panel === "search" ? "Search chats" : "Your conversations"}
+            </h2><p className="mt-1 text-xs text-muted-foreground">Pick up where you left off</p></div>
             <button
               onClick={() => setPanel(null)}
               aria-label="Close panel"
@@ -196,36 +236,49 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
               name="chat-search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search conversations..."
-              className="mt-3 w-full animate-[fade-in_0.25s_ease-out] rounded-lg bg-secondary px-3 py-2 text-sm outline-none transition-shadow focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+              placeholder="Search titles and messages..."
+              className="mt-3 w-full animate-[fade-in_0.25s_ease-out] rounded-xl border border-border/70 bg-background/70 px-3 py-2.5 text-sm outline-none transition-shadow focus:border-primary/50 focus:ring-2 focus:ring-primary/10 placeholder:text-muted-foreground"
             />
           )}
 
           <button
             onClick={startNewChat}
-            className="mt-3 w-full rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-transform duration-200 hover:scale-[1.02] active:scale-95"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:brightness-110 active:scale-[.98]"
           >
-            New chat
+            <PencilLine className="h-4 w-4" /> New chat
           </button>
 
-          <div className="mt-4 space-y-1 overflow-y-auto">
-            {visible.length === 0 && (
-              <p className="px-1 py-2 text-xs text-muted-foreground">No conversations yet.</p>
+          <div className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pr-1">
+            {loadingThreads && <p className="px-1 py-2 text-xs text-muted-foreground">Refreshing chats…</p>}
+            {threadLoadError && <p role="status" className="rounded-lg bg-secondary/70 px-2.5 py-2 text-xs text-muted-foreground">{threadLoadError}</p>}
+            {!loadingThreads && visible.length === 0 && (
+              <div className="rounded-xl border border-dashed border-border/80 px-3 py-5 text-center">
+                <Search className="mx-auto mb-2 h-5 w-5 text-muted-foreground/70" />
+                <p className="text-sm font-medium">{normalizedQuery ? "No matching chats" : "No conversations yet"}</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{normalizedQuery ? "Try a different word from the chat title or message." : "Start a new chat and it will appear here."}</p>
+              </div>
             )}
-            {visible.map((thread, i) => (
+            {groupOrder.map((group) => groupedThreads[group]?.length ? (
+              <section key={group} aria-label={group}>
+                <h3 className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/75">{group}</h3>
+                <div className="space-y-0.5">
+                  {groupedThreads[group].map((thread, i) => (
               <div
                 key={thread.id}
                 style={{ animationDelay: `${Math.min(i, 10) * 35}ms` }}
-                className={`group flex animate-[fade-in_0.3s_ease-out_both] items-center gap-2 rounded-lg px-2 py-2 text-sm transition-all duration-200 hover:translate-x-1 hover:bg-secondary ${thread.id === activeThreadId ? "bg-secondary" : ""}`}
+                className={`group flex animate-[fade-in_0.3s_ease-out_both] items-start gap-2 rounded-xl px-2.5 py-2.5 text-sm transition-colors hover:bg-secondary/80 ${thread.id === activeThreadId ? "bg-secondary/90" : ""}`}
               >
                 <button
                   onClick={() => {
                     setPanel(null);
                     void navigate({ to: "/chat/$threadId", params: { threadId: thread.id } });
                   }}
-                  className="flex-1 truncate text-left"
+                  className="min-w-0 flex-1 text-left"
                 >
-                  {thread.title}
+                  <span className="block truncate font-medium">{thread.title || "New chat"}</span>
+                  {normalizedQuery && getSearchExcerpt(thread) && (
+                    <span className="mt-1 block line-clamp-2 text-xs leading-relaxed text-muted-foreground">{getSearchExcerpt(thread)}</span>
+                  )}
                 </button>
                 <button
                   aria-label="Delete chat"
@@ -235,12 +288,18 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
                     if (thread.id === activeThreadId) startNewChat();
                   }}
                   title="Delete chat"
-                  className="text-muted-foreground opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 hover:text-destructive"
+                  className="shrink-0 rounded-md p-1 text-muted-foreground opacity-100 transition-colors hover:bg-background hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
-              </div>
-            ))}
+                  </div>
+                ))}
+                </div>
+              </section>
+            ) : null)}
+          </div>
+          <div className="mt-2 border-t border-border/70 pt-3 text-[11px] text-muted-foreground">
+            <Clock3 className="mr-1 inline h-3.5 w-3.5" /> Chats are saved on this device
           </div>
         </div>
       )}

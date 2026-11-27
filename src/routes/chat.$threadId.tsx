@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { FileText, Loader2, Plus, SendHorizontal, Sparkles, BookOpen, Lightbulb, Atom, X, ChevronDown, CircleHelp, Copy, Pencil, Check, Maximize2, Mic, Square } from "lucide-react";
+import { FileText, Loader2, Plus, SendHorizontal, Sparkles, BookOpen, Lightbulb, Atom, X, ChevronDown, CircleHelp, Copy, Pencil, Check, Maximize2, Mic } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -76,6 +76,7 @@ function ChatPage() {
   const [documentContext, setDocumentContext] = useState<{ name: string; text: string }[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
+  const [chatTitle, setChatTitle] = useState(initial.title || "Shiva AI");
 
   const { messages, sendMessage, setMessages, status, error } = useChat({
     id: threadId,
@@ -133,7 +134,10 @@ function ChatPage() {
         return response.json() as Promise<{ title?: string }>;
       })
       .then((result) => {
-        if (result.title) setThreadTitle(threadId, result.title);
+        if (result.title) {
+          setThreadTitle(threadId, result.title);
+          setChatTitle(result.title);
+        }
       })
       .catch((titleError) => {
         console.warn("Shiva AI could not update this chat title:", titleError);
@@ -258,11 +262,6 @@ function ChatPage() {
     }
   }
 
-  function stopVoiceInput() {
-    voiceStopRequestedRef.current = true;
-    recognitionRef.current?.stop();
-  }
-
   function cancelVoiceInput() {
     voiceStopRequestedRef.current = true;
     recognitionRef.current?.abort();
@@ -288,6 +287,7 @@ function ChatPage() {
     const text = input.trim();
     if ((!text && pendingImages.length === 0) || isBusy) return;
     setInput("");
+    if (chatTitle === "New chat" || chatTitle === "Shiva AI") setChatTitle(text.slice(0, 40) || "Shiva AI");
     shouldAutoScrollRef.current = true;
     setShowScrollToBottom(false);
     const noteContext = documentContext.length
@@ -315,7 +315,7 @@ function ChatPage() {
   const empty = messages.length === 0;
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative h-[100svh] overflow-hidden">
       <div
         aria-hidden
         className="pointer-events-none absolute left-1/2 top-1/2 h-[500px] w-[700px] -translate-x-1/2 -translate-y-1/2 blur-3xl"
@@ -323,12 +323,12 @@ function ChatPage() {
       />
       <ShivaSidebar activeThreadId={threadId} />
 
-      <main className="relative z-10 ml-14 flex min-h-[100svh] flex-col items-center px-3 sm:px-5">
-        {!quizMode && <div className="flex w-full max-w-2xl justify-end pt-3"><button type="button" onClick={() => setQuizMode(true)} className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3.5 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/15 active:scale-[.98]"><CircleHelp className="h-4 w-4" /> Create a quiz</button></div>}
+      <main className="relative z-10 ml-14 flex h-full min-h-0 flex-col items-center overflow-hidden px-3 sm:px-5">
+        {!quizMode && <div className="flex w-full max-w-4xl shrink-0 items-center justify-between gap-3 pt-3"><h1 className="min-w-0 truncate text-base font-semibold tracking-tight text-foreground">{empty ? "Shiva AI" : chatTitle}</h1><button type="button" onClick={() => setQuizMode(true)} className="inline-flex shrink-0 items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3.5 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/15 active:scale-[.98]"><CircleHelp className="h-4 w-4" /> Create a quiz</button></div>}
         {quizMode ? (
           <QuizBuilder onClose={() => setQuizMode(false)} />
         ) : empty ? (
-          <div className="flex w-full max-w-2xl flex-1 flex-col justify-center gap-7 py-8">
+          <div className="flex w-full max-w-2xl min-h-0 flex-1 flex-col justify-center gap-7 overflow-y-auto py-8">
             <div className="space-y-3 text-center">
               <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-lg shadow-primary/10"><Sparkles className="h-7 w-7" /></div>
               <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">What are we learning today?</h1>
@@ -354,10 +354,7 @@ function ChatPage() {
           </div>
         ) : (
           <>
-            <div className="flex w-full max-w-2xl items-center justify-between pt-6">
-              <h1 className="text-lg font-semibold tracking-tight">Shiva AI</h1>
-              <button type="button" onClick={() => setQuizMode(true)} className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:border-primary/40 hover:text-foreground"><CircleHelp className="h-3.5 w-3.5" /> Create quiz</button>
-            </div>
+
             <section
               onScroll={(event) => {
                 const element = event.currentTarget;
@@ -366,7 +363,7 @@ function ChatPage() {
                 shouldAutoScrollRef.current = nearBottom;
                 setShowScrollToBottom(!nearBottom && element.scrollHeight > element.clientHeight + 80);
               }}
-              className="mt-4 flex w-full max-w-2xl flex-1 flex-col gap-4 overflow-y-auto pb-4"
+              className="mt-4 flex w-full max-w-4xl min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain pb-36"
             >
               {messages.map((m, messageIndex) => {
                 const text = m.parts
@@ -455,7 +452,7 @@ function ChatPage() {
           </button>
         )}
 
-        <div className={empty ? "w-full max-w-2xl pb-10" : "w-full max-w-2xl pb-6"}>
+        <div className={empty ? "w-full max-w-2xl shrink-0 pb-4" : "w-full max-w-2xl shrink-0 pb-3"}>
           {(notes.length > 0 || pendingImages.length > 0 || documentContext.length > 0 || uploadError) && (
             <div className="mb-3 flex flex-wrap items-center justify-center gap-2">
               {notes.map((n) => (
@@ -495,7 +492,7 @@ function ChatPage() {
 
           {editingMessageIndex !== null && (
             <div className="mx-auto mb-2 flex w-full max-w-2xl items-center justify-between rounded-xl border border-primary/25 bg-primary/5 px-3 py-2 text-xs text-primary">
-              <span>Editing message · sending will replace it and regenerate Shiva AI's reply.</span>
+              <span>Editing message</span>
               <button type="button" onClick={() => { setEditingMessageIndex(null); setInput(""); }} className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" aria-label="Cancel editing" title="Cancel editing">
                 <X className="h-4 w-4" />
               </button>
@@ -527,9 +524,7 @@ function ChatPage() {
                     <span key={i} className="w-[3px] shrink-0 rounded-full bg-muted-foreground/75 animate-pulse" style={{ height: `${5 + ((i * 17 + 11) % 29)}px`, animationDelay: `${(i % 9) * 75}ms`, animationDuration: `${420 + (i % 5) * 130}ms` }} />
                   ))}
                 </div>
-                <button type="button" onClick={stopVoiceInput} aria-label="Stop recording" title="Stop recording" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-background text-foreground shadow-sm transition-colors hover:bg-background/80">
-                  <Square className="h-4 w-4 fill-current" />
-                </button>
+                
                 <button type="submit" disabled={isBusy || !input.trim()} aria-label="Send transcribed message" title="Send transcribed message" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-95 disabled:bg-muted disabled:text-muted-foreground">
                   <SendHorizontal className="h-5 w-5" />
                 </button>
