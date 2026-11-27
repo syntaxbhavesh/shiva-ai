@@ -68,7 +68,8 @@ export function ShivaAccount({ expanded = false }: { expanded?: boolean }) {
 
     const handleBookstoreMessage = async (event: MessageEvent) => {
       if (event.origin !== "https://bookstore-nt.vercel.app") return;
-      if (ssoPopup.current && event.source !== ssoPopup.current) return;
+      const popup = ssoPopup.current;
+      if (!popup || event.source !== popup) return;
       if (event.data?.type !== "BOOKSTORE_SSO_TOKEN" || typeof event.data.idToken !== "string") return;
       setBusy(true);
       setError("");
@@ -83,12 +84,15 @@ export function ShivaAccount({ expanded = false }: { expanded?: boolean }) {
           throw new Error(payload.error || "Could not verify your BOOKStore session.");
         }
         await signInWithCustomToken(bookstoreAuth, payload.customToken);
-        ssoPopup.current?.close();
+        popup.postMessage({ type: "SHIVA_BOOKSTORE_SSO_SUCCESS" }, event.origin);
+        popup.close();
         ssoPopup.current = null;
         setMenuOpen(false);
         setAuthOpen(false);
       } catch (syncError) {
-        setError(syncError instanceof Error ? syncError.message : "BOOKStore account sync failed.");
+        const message = syncError instanceof Error ? syncError.message : "BOOKStore account sync failed.";
+        setError(message);
+        popup.postMessage({ type: "SHIVA_BOOKSTORE_SSO_ERROR", message }, event.origin);
       } finally {
         setBusy(false);
       }
@@ -104,7 +108,7 @@ export function ShivaAccount({ expanded = false }: { expanded?: boolean }) {
   function startBookstoreSync() {
     setError("");
     const popup = window.open(
-      "https://bookstore-nt.vercel.app/?shiva_sso=1",
+      `https://bookstore-nt.vercel.app/?shiva_sso=1&shiva_origin=${encodeURIComponent(window.location.origin)}`,
       "bookstore-sso",
       "popup=yes,width=520,height=720"
     );
