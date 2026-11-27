@@ -186,7 +186,7 @@ export function ShivaAccount({ expanded = false }: { expanded?: boolean }) {
               ) : (
                 <>
                   <button onClick={() => openAuth("login")} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"><UserRound className="h-[18px] w-[18px]" /> Login</button>
-                  <button onClick={startBookstoreSync} disabled={busy} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"><img src="https://bookstore-nt.vercel.app/book.png" alt="" className="h-[18px] w-[18px] object-contain" /> {busy ? "Connecting to BOOKStore..." : "Sync BOOKStore Account"}</button>
+                  <button onClick={startBookstoreSync} disabled={busy} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"><img src="https://bookstore-nt.vercel.app/book.png" alt="BOOKStore" className="h-[18px] w-[18px] shrink-0 object-contain" /> {busy ? "Connecting to BOOKStore..." : "Sync BOOKStore Account"}</button>
                   <button onClick={() => openAuth("register")} className="mt-1 w-full rounded-xl bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90">Create account</button>
                 </>
               )}
