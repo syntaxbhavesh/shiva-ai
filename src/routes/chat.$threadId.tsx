@@ -360,7 +360,6 @@ function ChatPage() {
         ) : empty ? (
           <div className="flex w-full max-w-2xl min-h-0 flex-1 flex-col justify-center gap-7 overflow-y-auto py-8">
             <div className="space-y-3 text-center">
-              <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-lg shadow-primary/10"><Sparkles className="h-7 w-7" /></div>
               <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">What are we learning today?</h1>
               <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">Ask a question, explore a concept, or get help with your study plan.</p>
             </div>
