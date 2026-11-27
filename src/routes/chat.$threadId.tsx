@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { FileText, Loader2, Plus, SendHorizontal, Square, Sparkles, BookOpen, Lightbulb, Atom, X, ChevronDown, CircleHelp, Copy, Pencil, Check, Maximize2, Mic, Pause } from "lucide-react";
+import { FileText, Loader2, Plus, SendHorizontal, Square, Sparkles, BookOpen, Lightbulb, Atom, X, ChevronDown, CircleHelp, Copy, Pencil, Check, Maximize2, Mic } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
