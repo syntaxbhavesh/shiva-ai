@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { FileText, Loader2, Plus, SendHorizontal, Sparkles, BookOpen, Lightbulb, Atom, X, ChevronDown, CircleHelp, Copy, Pencil, Check, Maximize2, Mic } from "lucide-react";
+import { FileText, Loader2, Plus, SendHorizontal, Sparkles, BookOpen, Lightbulb, Atom, X, ChevronDown, CircleHelp, Copy, Pencil, Check, Maximize2, Mic, Pause } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -78,7 +78,7 @@ function ChatPage() {
   const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
   const [chatTitle, setChatTitle] = useState(initial.title || "Shiva AI");
 
-  const { messages, sendMessage, setMessages, status, error } = useChat({
+  const { messages, sendMessage, setMessages, status, error, stop } = useChat({
     id: threadId,
     messages: initial.messages,
     transport: new DefaultChatTransport({ api: "/api/chat" }),
@@ -424,7 +424,10 @@ function ChatPage() {
                 );
               })}
               {status === "submitted" && (
-                <p className="mr-auto animate-pulse text-sm text-muted-foreground">Thinking…</p>
+                <div className="mr-auto flex items-center gap-3 text-sm text-muted-foreground"><span className="animate-pulse">Thinking…</span><button type="button" onClick={() => stop()} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"><Pause className="h-3.5 w-3.5" /> Stop</button></div>
+              )}
+              {status === "streaming" && (
+                <div className="mr-auto flex items-center gap-3 text-sm text-muted-foreground"><span className="animate-pulse">Shiva AI is replying…</span><button type="button" onClick={() => stop()} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"><Pause className="h-3.5 w-3.5" /> Stop</button></div>
               )}
               {error && (
                 <p role="alert" className="mr-auto max-w-[92%] rounded-xl bg-destructive/15 px-4 py-3 text-sm text-destructive">
@@ -502,6 +505,8 @@ function ChatPage() {
           {voiceError && <p role="status" className="mb-2 text-center text-xs text-destructive">{voiceError}</p>}
           <form
             onSubmit={submit}
+            onFocusCapture={() => window.dispatchEvent(new Event("shiva-close-chat-panels"))}
+            onClick={() => window.dispatchEvent(new Event("shiva-close-chat-panels"))}
             className="mx-auto flex w-full min-w-0 items-end gap-2 rounded-[1.75rem] border border-border/80 bg-card/95 px-3 py-3 shadow-[0_12px_40px_-18px_rgba(0,0,0,.7)] backdrop-blur-xl transition-all focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 sm:gap-3 sm:px-4"
           >
             <input
