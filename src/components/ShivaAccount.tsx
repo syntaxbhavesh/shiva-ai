@@ -12,7 +12,7 @@ import {
   type User,
 } from "firebase/auth";
 import { get, ref, serverTimestamp, set, update } from "firebase/database";
-import { ChevronRight, CircleUserRound, LogOut, UserRound, X, BookOpen, Loader2 } from "lucide-react";
+import { ChevronRight, CircleUserRound, LogOut, UserRound, X, Loader2 } from "lucide-react";
 import { bookstoreAuth, bookstoreDatabase } from "@/lib/bookstore-firebase";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
@@ -185,7 +185,7 @@ export function ShivaAccount({ expanded = false }: { expanded?: boolean }) {
               ) : (
                 <>
                   <button onClick={() => openAuth("login")} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"><UserRound className="h-[18px] w-[18px]" /> Login</button>
-                  <button onClick={startBookstoreSync} disabled={busy} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"><BookOpen className="h-[18px] w-[18px]" /> {busy ? "Connecting to BOOKStore..." : "Sync BOOKStore Account"}</button>
+                  <button onClick={startBookstoreSync} disabled={busy} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"><img src="https://bookstore-nt.vercel.app/book.png" alt="" className="h-[18px] w-[18px] shrink-0 rounded-sm object-contain" /> {busy ? "Connecting to BOOKStore..." : "Sync BOOKStore Account"}</button>
                   <button onClick={() => openAuth("register")} className="mt-1 w-full rounded-xl bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90">Create account</button>
                 </>
               )}
@@ -226,9 +226,9 @@ export function ShivaAccount({ expanded = false }: { expanded?: boolean }) {
           <section role="dialog" aria-modal="true" aria-labelledby="account-dialog-title" className="relative my-auto w-full max-w-[420px] overflow-hidden rounded-3xl border border-white/10 bg-[#202123] p-6 text-white shadow-[0_28px_100px_rgba(0,0,0,.7)] sm:p-8">
             <button aria-label="Close" onClick={() => { setAuthOpen(false); setProfileOpen(false); }} className="absolute right-4 top-4 rounded-full p-2 text-white/55 transition hover:bg-white/10 hover:text-white"><X className="h-5 w-5" /></button>
             <div className="mb-7 flex flex-col items-center text-center">
-              <div className="mb-4 grid h-12 w-12 place-items-center rounded-2xl border border-white/10 bg-white/[.06] text-white"><BookOpen className="h-6 w-6" /></div>
+              <div className="mb-4 grid h-12 w-12 place-items-center rounded-2xl border border-white/10 bg-white/[.06]"><img src="/favicon.png" alt="Shiva AI" className="h-8 w-8 rounded-lg object-contain" /></div>
               <h2 id="account-dialog-title" className="text-2xl font-semibold tracking-tight">{profileOpen ? "Your account" : mode === "login" ? "Welcome back" : "Create your account"}</h2>
-              <p className="mt-2 text-sm text-white/55">{profileOpen ? "Your BOOKStore account is connected to Shiva AI." : mode === "login" ? "Log in to continue to Shiva AI." : "Sign up to get started with Shiva AI."}</p>
+              <p className="mt-2 text-sm text-white/55">{profileOpen ? "Manage your Shiva AI account." : mode === "login" ? "Log in to continue to Shiva AI." : "Sign up to get started with Shiva AI."}</p>
             </div>
             {profileOpen && user ? (
               <div className="text-center">
@@ -247,7 +247,7 @@ export function ShivaAccount({ expanded = false }: { expanded?: boolean }) {
                 <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-wider text-white/35"><span className="h-px flex-1 bg-white/10" />or<span className="h-px flex-1 bg-white/10" /></div>
                 <button disabled={busy} onClick={() => void runAuth(() => signInWithPopup(bookstoreAuth, new GoogleAuthProvider()))} className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/15 bg-transparent px-4 py-3 text-sm font-medium text-white transition hover:bg-white/[.06] disabled:opacity-60"><span className="grid h-5 w-5 place-items-center rounded-full bg-white text-sm font-bold text-[#4285F4]">G</span>Continue with Google</button>
                 <p className="mt-6 text-center text-sm text-white/55">{mode === "login" ? "Don't have an account?" : "Already have an account?"} <button onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }} className="font-semibold text-white underline-offset-4 hover:underline">{mode === "login" ? "Sign up" : "Log in"}</button></p>
-                <p className="mt-5 text-center text-[11px] leading-relaxed text-white/35">By continuing, you agree to BOOKStore's account terms and privacy policy.</p>
+                <p className="mt-5 text-center text-[11px] leading-relaxed text-white/35">By continuing, you agree to BOOKStore's account terms and <a href="https://bookstore-nt.vercel.app/privacy.html" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-white/70">privacy policy</a>.</p>
               </>
             )}
           </section>
