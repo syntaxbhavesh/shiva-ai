@@ -114,7 +114,8 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
     return "Older";
   }
 
-  const groupedThreads = visible.reduce<Record<string, Thread[]>>((groups, thread) => {
+  const pinnedThreads = visible.filter((thread) => thread.pinned);
+  const groupedThreads = visible.filter((thread) => !thread.pinned).reduce<Record<string, Thread[]>>((groups, thread) => {
     const group = getDateGroup(thread.updatedAt);
     (groups[group] ??= []).push(thread);
     return groups;
@@ -261,6 +262,15 @@ export function ShivaSidebar({ activeThreadId }: { activeThreadId?: string }) {
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{normalizedQuery ? "Try a different word from the chat title or message." : "Start a new chat and it will appear here."}</p>
               </div>
             )}
+            {pinnedThreads.length > 0 && <section aria-label="Pinned chats"><h3 className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/75">Pinned</h3><div className="space-y-0.5">{pinnedThreads.map((thread) => (
+              <div key={thread.id} className={`group flex items-start gap-2 rounded-xl px-2.5 py-2.5 text-sm transition-colors hover:bg-secondary/80 ${thread.id === activeThreadId ? "bg-secondary/90" : ""}`}>
+                <button onClick={() => { setPanel(null); void navigate({ to: "/chat/$threadId", params: { threadId: thread.id } }); }} className="min-w-0 flex-1 text-left">
+                  <span className="flex min-w-0 items-center gap-1.5"><span className="block min-w-0 truncate font-medium">{thread.title || "New chat"}</span><Pin className="h-3 w-3 shrink-0 text-primary" aria-label="Pinned chat" /></span>
+                  {normalizedQuery && getSearchExcerpt(thread) && <span className="mt-1 block line-clamp-2 text-xs leading-relaxed text-muted-foreground">{getSearchExcerpt(thread)}</span>}
+                </button>
+                <button aria-label="Delete chat" onClick={() => { deleteThread(thread.id); setThreads(loadThreads()); if (thread.id === activeThreadId) startNewChat(); }} title="Delete chat" className="shrink-0 rounded-md p-1 text-muted-foreground opacity-100 transition-colors hover:bg-background hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100"><Trash2 className="h-4 w-4" /></button>
+              </div>
+            ))}</div></section>}
             {groupOrder.map((group) => groupedThreads[group]?.length ? (
               <section key={group} aria-label={group}>
                 <h3 className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/75">{group}</h3>
